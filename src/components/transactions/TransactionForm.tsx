@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -58,16 +57,13 @@ const TransactionForm: React.FC = () => {
   };
 
   const onSubmit = (data: FormData) => {
-    // Ensure all required fields are present before submitting
-    const transaction: Omit<FormData, 'id'> = {
+    addTransaction({
       amount: data.amount,
       description: data.description,
       category: data.category,
       type: data.type,
       date: data.date,
-    };
-    
-    addTransaction(transaction);
+    });
     
     toast({
       title: 'Transaction added!',
