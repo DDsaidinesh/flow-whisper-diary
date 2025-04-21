@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FileSpreadsheet, Search, Calendar } from 'lucide-react';
+import { FileSpreadsheet, Search, Calendar, Filter, X, Eraser } from 'lucide-react';
 import { useMoneyFlow } from '@/contexts/MoneyFlowContext';
 import {
   Select,
@@ -24,7 +24,19 @@ const TransactionTable = () => {
   const { transactions } = useMoneyFlow();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
-  const [date, setDate] = useState<Date>();
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterType('all');
+    setDateRange({ from: undefined, to: undefined });
+  };
 
   const exportToExcel = () => {
     // Create CSV content
@@ -61,9 +73,12 @@ const TransactionTable = () => {
     
     const matchesType = filterType === "all" || transaction.type === filterType;
     
-    const matchesDate = !date || format(new Date(transaction.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+    const transactionDate = new Date(transaction.date);
+    const matchesDateRange = 
+      (!dateRange.from || transactionDate >= dateRange.from) &&
+      (!dateRange.to || transactionDate <= dateRange.to);
     
-    return matchesSearch && matchesType && matchesDate;
+    return matchesSearch && matchesType && matchesDateRange;
   });
 
   return (
@@ -89,6 +104,17 @@ const TransactionTable = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
             />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-2 top-2"
+                onClick={() => setSearchTerm('')}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Clear search</span>
+              </Button>
+            )}
           </div>
           
           <Select
@@ -109,21 +135,56 @@ const TransactionTable = () => {
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-[180px] justify-start text-left font-normal"
+                className="w-[240px] justify-start text-left font-normal"
               >
                 <Calendar className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Filter by date</span>}
+                {dateRange.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                      {format(dateRange.to, "MMM d, yyyy")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "MMM d, yyyy")
+                  )
+                ) : (
+                  <span>Select date range</span>
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <CalendarComponent
-                mode="single"
-                selected={date}
-                onSelect={setDate}
                 initialFocus
+                mode="range"
+                defaultMonth={dateRange.from}
+                selected={{
+                  from: dateRange.from,
+                  to: dateRange.to,
+                }}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+                className="p-3 pointer-events-auto"
               />
             </PopoverContent>
           </Popover>
+
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={clearFilters}
+            className="shrink-0"
+            title="Clear all filters"
+          >
+            <Eraser className="h-4 w-4" />
+            <span className="sr-only">Clear filters</span>
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Filter className="h-4 w-4" />
+          <span>
+            Showing {filteredTransactions.length} of {transactions.length} transactions
+          </span>
         </div>
       </div>
       
@@ -138,18 +199,26 @@ const TransactionTable = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTransactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell>{format(new Date(transaction.date), 'MMM dd, yyyy')}</TableCell>
-                <TableCell>{transaction.description}</TableCell>
-                <TableCell>{transaction.category}</TableCell>
-                <TableCell className="text-right">
-                  <span className={transaction.type === 'income' ? 'text-flow-green' : 'text-flow-red'}>
-                    {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
-                  </span>
+            {filteredTransactions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8">
+                  No transactions found matching your filters
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredTransactions.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell>{format(new Date(transaction.date), 'MMM dd, yyyy')}</TableCell>
+                  <TableCell>{transaction.description}</TableCell>
+                  <TableCell>{transaction.category}</TableCell>
+                  <TableCell className="text-right">
+                    <span className={transaction.type === 'income' ? 'text-flow-green' : 'text-flow-red'}>
+                      {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
@@ -158,3 +227,4 @@ const TransactionTable = () => {
 };
 
 export default TransactionTable;
+
