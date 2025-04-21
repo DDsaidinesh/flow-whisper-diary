@@ -3,20 +3,28 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { FileSpreadsheet, Filter } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { FileSpreadsheet, Search, Calendar } from 'lucide-react';
 import { useMoneyFlow } from '@/contexts/MoneyFlowContext';
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
 const TransactionTable = () => {
   const { transactions } = useMoneyFlow();
+  const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
+  const [date, setDate] = useState<Date>();
 
   const exportToExcel = () => {
     // Create CSV content
@@ -47,49 +55,75 @@ const TransactionTable = () => {
   };
 
   const filteredTransactions = transactions.filter(transaction => {
-    if (filterType === "all") return true;
-    return transaction.type === filterType;
+    const matchesSearch = 
+      transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = filterType === "all" || transaction.type === filterType;
+    
+    const matchesDate = !date || format(new Date(transaction.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+    
+    return matchesSearch && matchesType && matchesDate;
   });
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Transaction History</h3>
-        <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Filter className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={filterType === "all"}
-                onCheckedChange={() => setFilterType("all")}
-              >
-                All Transactions
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={filterType === "income"}
-                onCheckedChange={() => setFilterType("income")}
-              >
-                Income Only
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={filterType === "expense"}
-                onCheckedChange={() => setFilterType("expense")}
-              >
-                Expenses Only
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-2xl font-bold">Transaction History</h3>
+            <p className="text-muted-foreground">View and manage all your transactions</p>
+          </div>
           <Button onClick={exportToExcel} variant="outline">
             <FileSpreadsheet className="mr-2" />
             Export to Excel
           </Button>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"/>
+            <Input
+              placeholder="Search transactions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          
+          <Select
+            value={filterType}
+            onValueChange={(value: "all" | "income" | "expense") => setFilterType(value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Transactions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Transactions</SelectItem>
+              <SelectItem value="income">Income Only</SelectItem>
+              <SelectItem value="expense">Expenses Only</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-[180px] justify-start text-left font-normal"
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                {date ? format(date, "PPP") : <span>Filter by date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
       
