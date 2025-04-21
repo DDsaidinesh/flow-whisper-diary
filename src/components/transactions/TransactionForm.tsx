@@ -58,11 +58,22 @@ const TransactionForm: React.FC = () => {
   };
 
   const onSubmit = (data: FormData) => {
-    addTransaction(data);
+    // Ensure all required fields are present before submitting
+    const transaction: Omit<FormData, 'id'> = {
+      amount: data.amount,
+      description: data.description,
+      category: data.category,
+      type: data.type,
+      date: data.date,
+    };
+    
+    addTransaction(transaction);
+    
     toast({
       title: 'Transaction added!',
       description: `${data.type === 'income' ? 'Income' : 'Expense'} of $${data.amount} recorded.`,
     });
+    
     form.reset({
       amount: undefined,
       description: '',
