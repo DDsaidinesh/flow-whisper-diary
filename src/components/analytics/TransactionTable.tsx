@@ -19,15 +19,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
 
 const TransactionTable = () => {
   const { transactions } = useMoneyFlow();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
-  const [dateRange, setDateRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: undefined,
     to: undefined,
   });
@@ -74,9 +72,11 @@ const TransactionTable = () => {
     const matchesType = filterType === "all" || transaction.type === filterType;
     
     const transactionDate = new Date(transaction.date);
+    
+    // Handle the date range filtering safely
     const matchesDateRange = 
-      (!dateRange.from || transactionDate >= dateRange.from) &&
-      (!dateRange.to || transactionDate <= dateRange.to);
+      (!dateRange?.from || transactionDate >= dateRange.from) &&
+      (!dateRange?.to || transactionDate <= dateRange.to);
     
     return matchesSearch && matchesType && matchesDateRange;
   });
@@ -138,7 +138,7 @@ const TransactionTable = () => {
                 className="w-[240px] justify-start text-left font-normal"
               >
                 <Calendar className="mr-2 h-4 w-4" />
-                {dateRange.from ? (
+                {dateRange?.from ? (
                   dateRange.to ? (
                     <>
                       {format(dateRange.from, "MMM d, yyyy")} -{" "}
@@ -156,11 +156,8 @@ const TransactionTable = () => {
               <CalendarComponent
                 initialFocus
                 mode="range"
-                defaultMonth={dateRange.from}
-                selected={{
-                  from: dateRange.from,
-                  to: dateRange.to,
-                }}
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
                 onSelect={setDateRange}
                 numberOfMonths={2}
                 className="p-3 pointer-events-auto"
@@ -227,4 +224,3 @@ const TransactionTable = () => {
 };
 
 export default TransactionTable;
-
