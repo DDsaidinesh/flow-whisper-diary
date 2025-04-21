@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,28 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Custom colors for our money flow app
+				'flow-blue': {
+					light: '#D3E4FD',
+					DEFAULT: '#33C3F0',
+					dark: '#1EAEDB',
+				},
+				'flow-green': {
+					light: '#E8F5E9',
+					DEFAULT: '#4CAF50',
+					dark: '#388E3C',
+				},
+				'flow-red': {
+					light: '#FFEBEE',
+					DEFAULT: '#FF6B6B',
+					dark: '#E53935',
+				},
+				'flow-neutral': {
+					light: '#F5F5F5',
+					DEFAULT: '#9E9E9E',
+					dark: '#616161',
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,11 +106,33 @@ export default {
 					to: {
 						height: '0'
 					}
-				}
+				},
+				'fade-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'fade-out': {
+					'0%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					},
+					'100%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
+					}
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.3s ease-out',
+				'fade-out': 'fade-out 0.3s ease-out',
 			}
 		}
 	},
