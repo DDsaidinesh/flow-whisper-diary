@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
-import { useMoneyFlow, Transaction } from '@/contexts/MoneyFlowContext';
+import { useMoneyFlow } from '@/contexts/MoneyFlowContext';
 import SpendingChart from '@/components/analytics/SpendingChart';
+import TransactionTable from '@/components/analytics/TransactionTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -38,29 +38,24 @@ const Analytics: React.FC = () => {
   const generateChartData = () => {
     const { start, end } = getDateRange();
     
-    // Generate all days in the range
     const days = eachDayOfInterval({ start, end });
     
-    // Initialize data for each day
     const initialData = days.map(day => ({
       date: format(day, 'yyyy-MM-dd'),
       income: 0,
       expense: 0,
     }));
     
-    // Filter transactions within date range
     const filteredTransactions = transactions.filter(t => {
       const tDate = new Date(t.date);
       return tDate >= start && tDate <= end;
     });
     
-    // Group transactions by date
     const dataMap = new Map();
     initialData.forEach(item => {
       dataMap.set(item.date, { ...item });
     });
     
-    // Add transaction amounts to respective dates
     filteredTransactions.forEach(transaction => {
       const date = transaction.date.split('T')[0];
       const data = dataMap.get(date);
@@ -74,7 +69,6 @@ const Analytics: React.FC = () => {
       }
     });
     
-    // Convert map back to array and format for chart
     return Array.from(dataMap.values()).map(item => ({
       ...item,
       date: format(new Date(item.date), timeFrame === '7days' ? 'EEE' : 'MMM dd'),
@@ -136,26 +130,14 @@ const Analytics: React.FC = () => {
       </div>
       
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-medium">Monthly Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {generateCategorySummary().map((item, index) => (
-              <div key={index} className="p-4 border rounded-lg">
-                <h3 className="font-medium text-gray-800">{item.category}</h3>
-                <p className="text-2xl font-bold text-flow-red mt-2">${item.amount.toFixed(2)}</p>
-                <p className="text-sm text-gray-500">{item.percentage}% of total spending</p>
-              </div>
-            ))}
-          </div>
+        <CardContent className="pt-6">
+          <TransactionTable />
         </CardContent>
       </Card>
     </div>
   );
 };
 
-// Helper function to get category spending summary
 function generateCategorySummary() {
   const { getCategoryTotals, getExpenses } = useMoneyFlow();
   
