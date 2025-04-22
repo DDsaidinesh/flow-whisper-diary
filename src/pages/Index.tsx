@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Plus, DollarSign, PieChart, BarChart3 } from 'lucide-react';
@@ -6,8 +7,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
@@ -19,6 +18,7 @@ import TransactionForm from '@/components/transactions/TransactionForm';
 const Index: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   return (
     <div className="min-h-screen flex flex-col items-center bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 p-4 relative overflow-hidden">
@@ -84,7 +84,7 @@ const Index: React.FC = () => {
         <div className="animate-bounce bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-md">
           <p className="text-sm text-gray-600 dark:text-gray-300">Add a transaction</p>
         </div>
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button 
               size="lg"
@@ -97,7 +97,7 @@ const Index: React.FC = () => {
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
-            <TransactionForm />
+            <TransactionForm isDialog={true} onClose={() => setIsDialogOpen(false)} />
           </DialogContent>
         </Dialog>
       </div>

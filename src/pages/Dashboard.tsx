@@ -14,7 +14,7 @@ const Dashboard: React.FC = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-8">
-          <TransactionForm />
+          <TransactionForm isDialog={false} />
           <SpendingChart />
         </div>
         <TransactionList />

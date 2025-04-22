@@ -47,7 +47,12 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-const TransactionForm: React.FC = () => {
+interface TransactionFormProps {
+  isDialog?: boolean;
+  onClose?: () => void;
+}
+
+const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onClose }) => {
   const { toast } = useToast();
   const { addTransaction } = useMoneyFlow();
   const [activeType, setActiveType] = useState<TransactionType>('expense');
@@ -92,9 +97,136 @@ const TransactionForm: React.FC = () => {
       date: new Date().toISOString().split('T')[0],
     });
     
-    setIsOpen(false);
+    if (isDialog && onClose) {
+      onClose();
+    } else {
+      setIsOpen(false);
+    }
   };
 
+  // If it's a dialog, render just the form content
+  if (isDialog) {
+    return (
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Add New Transaction</h2>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex gap-2 mb-4">
+              <Button
+                type="button"
+                variant={activeType === 'expense' ? 'default' : 'outline'}
+                className={`flex-1 gap-2 ${
+                  activeType === 'expense' ? 'bg-flow-red hover:bg-flow-red-dark' : ''
+                }`}
+                onClick={() => handleTypeChange('expense')}
+              >
+                <MinusCircle className="h-4 w-4" />
+                Expense
+              </Button>
+              <Button
+                type="button"
+                variant={activeType === 'income' ? 'default' : 'outline'}
+                className={`flex-1 gap-2 ${
+                  activeType === 'income' ? 'bg-flow-green hover:bg-flow-green-dark' : ''
+                }`}
+                onClick={() => handleTypeChange('income')}
+              >
+                <PlusCircle className="h-4 w-4" />
+                Income
+              </Button>
+            </div>
+
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Amount ($)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="0.00"
+                      type="number"
+                      step="0.01"
+                      inputMode="decimal"
+                      {...field}
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Input placeholder="What was this for?" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CATEGORIES[activeType].map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button 
+              type="submit" 
+              className={`w-full mt-6 ${
+                activeType === 'expense' 
+                  ? 'bg-flow-red hover:bg-flow-red-dark' 
+                  : 'bg-flow-green hover:bg-flow-green-dark'
+              }`}
+            >
+              Add {activeType === 'income' ? 'Income' : 'Expense'}
+            </Button>
+          </form>
+        </Form>
+      </div>
+    );
+  }
+
+  // Regular version with card and mobile trigger button
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
