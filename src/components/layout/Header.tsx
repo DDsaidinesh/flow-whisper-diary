@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,13 +8,14 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { label: 'Dashboard', href: '/' },
+  { label: 'Dashboard', href: '/dashboard' },
   { label: 'Transactions', href: '/transactions' },
   { label: 'Analytics', href: '/analytics' },
 ];
 
 const Header: React.FC = () => {
   const isMobile = useIsMobile();
+  const location = useLocation();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -54,7 +55,8 @@ const Header: React.FC = () => {
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  "text-sm font-medium transition-colors hover:text-primary"
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  location.pathname === item.href && "text-primary font-semibold"
                 )}
               >
                 {item.label}
