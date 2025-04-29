@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -37,50 +37,27 @@ const Login: React.FC = () => {
     setError(null);
     
     try {
+      // Login will handle token storage through Supabase client
       await login(data.email, data.password);
-      toast({
-        title: 'Login successful',
-        description: 'Welcome back to MoneyFlow!',
-      });
-      // No need to navigate here as the AuthContext's login function handles redirection
+      // Navigation is handled in the login function
     } catch (error) {
       console.error("Login error:", error);
       
-      // Handle common error scenarios
+      // Error is handled in the login function and displayed via toast
       if (error instanceof Error) {
         setError(error.message);
-        
-        if (error.message.includes('password')) {
-          toast({
-            title: 'Login failed',
-            description: 'Incorrect password. Please try again.',
-            variant: 'destructive',
-          });
-        } else if (error.message.includes('user') || error.message.includes('email')) {
-          toast({
-            title: 'Login failed',
-            description: 'User not found. Please check your email or register.',
-            variant: 'destructive',
-          });
-        } else {
-          toast({
-            title: 'Login failed',
-            description: error.message,
-            variant: 'destructive',
-          });
-        }
       } else {
         setError('An unexpected error occurred. Please try again later.');
-        toast({
-          title: 'Login failed',
-          description: 'Connection error. Please check your internet and try again.',
-          variant: 'destructive',
-        });
       }
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Clear any previous errors when component mounts
+  useEffect(() => {
+    setError(null);
+  }, []);
 
   // Get the intended destination from location state or default to dashboard
   const from = location.state?.from || "/dashboard";

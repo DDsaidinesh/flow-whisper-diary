@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, session } = useAuth();
   const location = useLocation();
   const { toast } = useToast();
 
@@ -27,7 +27,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }, [isAuthenticated, location.pathname, toast]);
 
-  if (!isAuthenticated) {
+  // Check if we have a valid session
+  if (!isAuthenticated || !session?.access_token) {
     // Redirect to login page if user is not authenticated, and pass the current location
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }

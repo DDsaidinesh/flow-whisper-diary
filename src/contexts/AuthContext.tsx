@@ -34,6 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -42,26 +43,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log('Auth state changed:', event, currentSession?.user?.email);
+        
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setIsAuthenticated(!!currentSession);
         setUserEmail(currentSession?.user?.email ?? null);
 
-        // For debug purposes
-        console.log('Auth state changed:', event, currentSession?.user?.email);
+        // Handle specific auth events
+        if (event === 'SIGNED_OUT') {
+          console.log('User signed out');
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed successfully');
+        }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setIsAuthenticated(!!currentSession);
-      setUserEmail(currentSession?.user?.email ?? null);
-      
-      // For debug purposes
-      console.log('Initial session check:', currentSession?.user?.email);
-    });
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error.message);
+          throw error;
+        }
+
+        console.log('Initial session check:', currentSession?.user?.email || 'No active session');
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setIsAuthenticated(!!currentSession);
+        setUserEmail(currentSession?.user?.email ?? null);
+      } catch (error) {
+        console.error('Session initialization error:', error);
+      } finally {
+        setIsInitialized(true);
+      }
+    };
+
+    initializeAuth();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -79,6 +100,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       if (data.user) {
+        // Session is automatically managed by Supabase
         toast({
           title: 'Login successful',
           description: 'Welcome back!',
@@ -158,6 +180,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) {
         throw error;
       }
+      
+      // Clear any local auth state
+      setSession(null);
+      setUser(null);
+      setIsAuthenticated(false);
+      setUserEmail(null);
       
       toast({
         title: 'Logged out',

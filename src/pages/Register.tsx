@@ -63,12 +63,6 @@ const Register: React.FC = () => {
       } else {
         setError('An unexpected error occurred. Please try again later.');
       }
-      
-      toast({
-        title: 'Registration failed',
-        description: error instanceof Error ? error.message : 'There was a problem creating your account',
-        variant: 'destructive',
-      });
     } finally {
       setIsLoading(false);
     }
