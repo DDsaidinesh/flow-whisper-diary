@@ -8,6 +8,7 @@ import MainLayout from "./components/layout/MainLayout";
 import { MoneyFlowProvider } from "./contexts/MoneyFlowContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { ToastProvider } from "./hooks/use-toast";
 
 // Pages
 import Index from "./pages/Index";
@@ -22,39 +23,41 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <AuthProvider>
-        <MoneyFlowProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              <Route path="/" element={<MainLayout />}>
-                <Route index element={<Index />} />
-                <Route path="login" element={<Login />} />
-                <Route path="register" element={<Register />} />
-                <Route path="dashboard" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="transactions" element={
-                  <ProtectedRoute>
-                    <Transactions />
-                  </ProtectedRoute>
-                } />
-                <Route path="analytics" element={
-                  <ProtectedRoute>
-                    <Analytics />
-                  </ProtectedRoute>
-                } />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </TooltipProvider>
-        </MoneyFlowProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <MoneyFlowProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route path="/" element={<MainLayout />}>
+                  <Route index element={<Index />} />
+                  <Route path="login" element={<Login />} />
+                  <Route path="register" element={<Register />} />
+                  <Route path="dashboard" element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="transactions" element={
+                    <ProtectedRoute>
+                      <Transactions />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="analytics" element={
+                    <ProtectedRoute>
+                      <Analytics />
+                    </ProtectedRoute>
+                  } />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </TooltipProvider>
+          </MoneyFlowProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ToastProvider>
   </QueryClientProvider>
 );
 

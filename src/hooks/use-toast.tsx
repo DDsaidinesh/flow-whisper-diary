@@ -59,7 +59,13 @@ export const useToast = () => {
 
 // Helper function to display a toast directly without the hook
 export const toast = (props: ToastProps) => {
-  const toastContext = useToast()
+  // We can't use this outside of the provider context, so this function should only be called
+  // from components that are inside the ToastProvider
+  const toastContext = useContext(ToastContext)
+  if (!toastContext) {
+    console.error("Toast function called outside of ToastProvider")
+    return
+  }
   toastContext.toast(props)
 }
 
