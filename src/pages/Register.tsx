@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters long' }),
@@ -28,7 +30,10 @@ const Register: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -36,22 +41,44 @@ const Register: React.FC = () => {
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
+    setError(null);
     
     try {
+      // Call register function but don't automatically navigate
       await registerUser(data.name, data.email, data.password);
-      // No need to navigate here as the AuthContext's register function handles redirection
+      
+      // Show success toast
+      toast({
+        title: 'Registration successful',
+        description: 'Your account has been created! Please log in.',
+      });
+      
+      // Redirect to login page
+      navigate('/login');
     } catch (error) {
       console.error("Registration error:", error);
+      
+      // Handle specific error cases
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An unexpected error occurred. Please try again later.');
+      }
+      
+      toast({
+        title: 'Registration failed',
+        description: error instanceof Error ? error.message : 'There was a problem creating your account',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Get the intended destination from location state or default to dashboard
-  const from = location.state?.from || "/dashboard";
-
-  // If user is already authenticated, redirect to intended destination
+  // If user is already authenticated, redirect to dashboard
   if (isAuthenticated) {
+    // Get the intended destination from location state or default to dashboard
+    const from = location.state?.from || "/dashboard";
     return <Navigate to={from} />;
   }
 
@@ -65,6 +92,11 @@ const Register: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>

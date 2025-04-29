@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface User {
   id: string;
@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  userEmail: string | null; // Adding userEmail property
+  userEmail: string | null; 
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -37,7 +37,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null); // Added userEmail state
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             created_at: localStorage.getItem('userCreatedAt') || new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
-          setUserEmail(email); // Set userEmail state
+          setUserEmail(email);
           setIsAuthenticated(true);
         }
       }
@@ -67,31 +67,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  // Temporary login function (to be replaced with real auth later)
+  // Login function with enhanced error handling
   const login = async (email: string, password: string): Promise<void> => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Check if email exists in localStorage (simulating user lookup)
+      const users = getAllUsers();
+      const existingUser = users.find(u => u.email === email);
       
-      const userId = `user_${Date.now()}`;
-      const now = new Date().toISOString();
+      if (!existingUser) {
+        throw new Error('User not found. Please check your email or register.');
+      }
+
+      // In a real app, you'd check password hash. This is just a simulation.
+      // Simulate a failed password (just for demonstration purposes)
+      if (password === 'wrongpassword') {
+        throw new Error('Incorrect password. Please try again.');
+      }
+      
+      // Simulate API call latency
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Store auth state in localStorage
       localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('userEmail', email);
-      localStorage.setItem('userId', userId);
-      localStorage.setItem('userCreatedAt', now);
+      localStorage.setItem('userEmail', existingUser.email);
+      localStorage.setItem('userName', existingUser.name || '');
+      localStorage.setItem('userId', existingUser.id);
+      localStorage.setItem('userCreatedAt', existingUser.created_at || new Date().toISOString());
       
       const userData: User = {
-        id: userId,
-        email,
-        name: null,
-        created_at: now,
-        updated_at: now
+        id: existingUser.id,
+        email: existingUser.email,
+        name: existingUser.name,
+        created_at: existingUser.created_at,
+        updated_at: new Date().toISOString()
       };
       
       setUser(userData);
-      setUserEmail(email); // Set userEmail state
+      setUserEmail(email);
       setIsAuthenticated(true);
       
       toast({
@@ -103,30 +115,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       toast({
         title: 'Login failed',
-        description: 'Invalid email or password. Please try again.',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
         variant: 'destructive',
       });
       throw error;
     }
   };
 
-  // Temporary registration function (to be replaced with real auth later)
+  // Helper function to get all users from localStorage
+  const getAllUsers = (): User[] => {
+    const usersJSON = localStorage.getItem('registeredUsers');
+    return usersJSON ? JSON.parse(usersJSON) : [];
+  };
+
+  // Registration function with improved error handling
   const register = async (name: string, email: string, password: string): Promise<void> => {
     try {
-      // Simulate API call
+      // Check if email is already registered
+      const users = getAllUsers();
+      const existingUser = users.find(u => u.email === email);
+      
+      if (existingUser) {
+        throw new Error('Email already registered. Please use a different email.');
+      }
+      
+      // Simulate API call latency
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const userId = `user_${Date.now()}`;
       const now = new Date().toISOString();
       
-      // Store auth state in localStorage
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('userName', name);
-      localStorage.setItem('userEmail', email);
-      localStorage.setItem('userId', userId);
-      localStorage.setItem('userCreatedAt', now);
-      
-      const userData: User = {
+      const newUser: User = {
         id: userId,
         email,
         name,
@@ -134,20 +153,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         updated_at: now
       };
       
-      setUser(userData);
-      setUserEmail(email); // Set userEmail state
-      setIsAuthenticated(true);
+      // Save user to "database" (localStorage)
+      const updatedUsers = [...users, newUser];
+      localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
       
       toast({
         title: 'Registration successful',
-        description: 'Your account has been created!',
+        description: 'Your account has been created! Please log in.',
       });
       
-      navigate('/dashboard');
+      // Important: We don't automatically log them in or navigate from here anymore
+      // The Register component will handle navigation to login page
     } catch (error) {
       toast({
         title: 'Registration failed',
-        description: 'There was a problem creating your account. Please try again.',
+        description: error instanceof Error ? error.message : 'There was a problem creating your account',
         variant: 'destructive',
       });
       throw error;
@@ -155,6 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear auth state
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userName');
@@ -163,7 +184,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     setIsAuthenticated(false);
     setUser(null);
-    setUserEmail(null); // Reset userEmail state
+    setUserEmail(null);
     
     toast({
       title: 'Logged out',
@@ -177,7 +198,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     <AuthContext.Provider value={{
       isAuthenticated,
       user,
-      userEmail, // Include userEmail in the context value
+      userEmail,
       login,
       register,
       logout

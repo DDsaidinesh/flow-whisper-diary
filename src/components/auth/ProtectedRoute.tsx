@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,16 +15,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   useEffect(() => {
     if (!isAuthenticated) {
+      // Show a more specific message about the page they're trying to access
+      const pageName = location.pathname.replace('/', '');
+      const formattedPageName = pageName.charAt(0).toUpperCase() + pageName.slice(1);
+      
       toast({
-        title: "Authentication required",
-        description: "Please login to access this page",
+        title: "Authentication Required",
+        description: `Please login to access the ${formattedPageName} page`,
         variant: "destructive",
       });
     }
-  }, [isAuthenticated, toast]);
+  }, [isAuthenticated, location.pathname, toast]);
 
   if (!isAuthenticated) {
-    // Redirect to login page if user is not authenticated
+    // Redirect to login page if user is not authenticated, and pass the current location
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 

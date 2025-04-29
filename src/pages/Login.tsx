@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -22,7 +24,9 @@ const Login: React.FC = () => {
   const { login, isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const location = useLocation();
+  const { toast } = useToast();
   
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -30,12 +34,49 @@ const Login: React.FC = () => {
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
+    setError(null);
     
     try {
       await login(data.email, data.password);
+      toast({
+        title: 'Login successful',
+        description: 'Welcome back to MoneyFlow!',
+      });
       // No need to navigate here as the AuthContext's login function handles redirection
     } catch (error) {
       console.error("Login error:", error);
+      
+      // Handle common error scenarios
+      if (error instanceof Error) {
+        setError(error.message);
+        
+        if (error.message.includes('password')) {
+          toast({
+            title: 'Login failed',
+            description: 'Incorrect password. Please try again.',
+            variant: 'destructive',
+          });
+        } else if (error.message.includes('user') || error.message.includes('email')) {
+          toast({
+            title: 'Login failed',
+            description: 'User not found. Please check your email or register.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Login failed',
+            description: error.message,
+            variant: 'destructive',
+          });
+        }
+      } else {
+        setError('An unexpected error occurred. Please try again later.');
+        toast({
+          title: 'Login failed',
+          description: 'Connection error. Please check your internet and try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +100,18 @@ const Login: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {location.state?.from && (
+            <Alert className="mb-4">
+              <AlertDescription>
+                Please log in to access {location.state.from.replace('/', '')}
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
