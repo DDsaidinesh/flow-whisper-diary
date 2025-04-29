@@ -34,6 +34,16 @@ export interface Transaction {
   updated_at: string;
 }
 
+// Define the migration result interface
+interface MigrationResult {
+  success: boolean;
+  migrated_count: number;
+  errors: Array<{
+    transaction: any;
+    error: string;
+  }>;
+}
+
 // Define categories for each transaction type
 export const CATEGORIES: Record<TransactionType, string[]> = {
   income: ['Salary', 'Freelance', 'Investments', 'Gifts', 'Other'],
@@ -439,10 +449,13 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
         
       if (error) throw error;
       
+      // Parse the result properly as MigrationResult
+      const migrationResult = data as MigrationResult;
+      
       // Show success message
       toast({
         title: 'Data migration successful',
-        description: `Migrated ${data.migrated_count} transactions to the database`,
+        description: `Migrated ${migrationResult.migrated_count} transactions to the database`,
       });
       
       // Reload transactions
