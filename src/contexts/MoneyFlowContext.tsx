@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 
@@ -88,65 +89,6 @@ interface MoneyFlowProviderProps {
   children: ReactNode;
 }
 
-// Sample data for initial load
-const createSampleData = (userId: string): Transaction[] => [
-  {
-    id: '1',
-    user_id: userId,
-    amount: 3500,
-    description: 'Monthly Salary',
-    category: 'Salary',
-    type: 'income',
-    date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    user_id: userId,
-    amount: 800,
-    description: 'Rent Payment',
-    category: 'Housing',
-    type: 'expense',
-    date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    user_id: userId,
-    amount: 120,
-    description: 'Grocery Shopping',
-    category: 'Food',
-    type: 'expense',
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    user_id: userId,
-    amount: 200,
-    description: 'Freelance Project',
-    category: 'Freelance',
-    type: 'income',
-    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '5',
-    user_id: userId,
-    amount: 50,
-    description: 'Movie Night',
-    category: 'Entertainment',
-    type: 'expense',
-    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
 // Create the provider component
 export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -191,10 +133,9 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
         if (savedTransactions) {
           setTransactions(JSON.parse(savedTransactions));
         } else {
-          // If no data exists for this user, use sample data
-          const userSampleData = createSampleData(user.id);
-          setTransactions(userSampleData);
-          localStorage.setItem(key, JSON.stringify(userSampleData));
+          // No sample data - initialize with empty array
+          setTransactions([]);
+          localStorage.setItem(key, JSON.stringify([]));
         }
       } else {
         // Clear transactions when not authenticated
@@ -209,7 +150,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
 
   // Save data to localStorage whenever transactions change
   useEffect(() => {
-    if (isAuthenticated && user && transactions.length > 0) {
+    if (isAuthenticated && user && transactions.length >= 0) {
       const key = `moneyFlowTransactions_${user.id}`;
       localStorage.setItem(key, JSON.stringify(transactions));
     }
@@ -240,8 +181,11 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
 
   // Delete a transaction
   const deleteTransaction = (id: string) => {
-    if (!isAuthenticated) return;
-    setTransactions(prev => prev.filter(transaction => transaction.id !== id));
+    if (!isAuthenticated || !user) return;
+    setTransactions(prev => prev.filter(transaction => 
+      // Only allow deleting user's own transactions
+      transaction.user_id === user.id && transaction.id === id
+    ));
   };
 
   // Clear all transactions
@@ -266,33 +210,43 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
     setCategories(prev => [...prev, newCategory]);
   };
 
-  // Get total balance
+  // Get total balance - filtered by current user
   const getBalance = () => {
-    return transactions.reduce((total, transaction) => {
-      return transaction.type === 'income'
-        ? total + transaction.amount
-        : total - transaction.amount;
-    }, 0);
+    if (!isAuthenticated || !user) return 0;
+    
+    return transactions
+      .filter(transaction => transaction.user_id === user.id)
+      .reduce((total, transaction) => {
+        return transaction.type === 'income'
+          ? total + transaction.amount
+          : total - transaction.amount;
+      }, 0);
   };
 
-  // Get total income
+  // Get total income - filtered by current user
   const getIncome = () => {
+    if (!isAuthenticated || !user) return 0;
+    
     return transactions
-      .filter(transaction => transaction.type === 'income')
+      .filter(transaction => transaction.user_id === user.id && transaction.type === 'income')
       .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
-  // Get total expenses
+  // Get total expenses - filtered by current user
   const getExpenses = () => {
+    if (!isAuthenticated || !user) return 0;
+    
     return transactions
-      .filter(transaction => transaction.type === 'expense')
+      .filter(transaction => transaction.user_id === user.id && transaction.type === 'expense')
       .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
-  // Get category totals for expense categories
+  // Get category totals for expense categories - filtered by current user
   const getCategoryTotals = () => {
+    if (!isAuthenticated || !user) return {};
+    
     return transactions
-      .filter(transaction => transaction.type === 'expense')
+      .filter(transaction => transaction.user_id === user.id && transaction.type === 'expense')
       .reduce((totals, transaction) => {
         const { category, amount } = transaction;
         return {
@@ -305,8 +259,8 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
   return (
     <MoneyFlowContext.Provider
       value={{
-        transactions,
-        categories,
+        transactions: user ? transactions.filter(t => t.user_id === user.id) : [],
+        categories: user ? categories.filter(c => !c.user_id || c.user_id === user.id) : [],
         addTransaction,
         deleteTransaction,
         clearAllTransactions,
