@@ -3,10 +3,17 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 
+interface User {
+  id: string;
+  email: string;
+  name: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
-  userEmail: string | null;
-  userName: string | null;
+  user: User | null;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -28,8 +35,7 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -37,12 +43,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = () => {
       const auth = localStorage.getItem('isAuthenticated') === 'true';
-      const email = localStorage.getItem('userEmail');
-      const name = localStorage.getItem('userName');
-      
-      setIsAuthenticated(auth);
-      setUserEmail(email);
-      setUserName(name);
+      if (auth) {
+        const email = localStorage.getItem('userEmail');
+        const name = localStorage.getItem('userName');
+        const userId = localStorage.getItem('userId') || `user_${Date.now()}`;
+        
+        if (email) {
+          setUser({
+            id: userId,
+            email,
+            name,
+            created_at: localStorage.getItem('userCreatedAt') || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          setIsAuthenticated(true);
+        }
+      }
     };
 
     checkAuth();
@@ -54,12 +70,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      const userId = `user_${Date.now()}`;
+      const now = new Date().toISOString();
+      
       // Store auth state in localStorage
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userEmail', email);
+      localStorage.setItem('userId', userId);
+      localStorage.setItem('userCreatedAt', now);
       
+      const userData: User = {
+        id: userId,
+        email,
+        name: null,
+        created_at: now,
+        updated_at: now
+      };
+      
+      setUser(userData);
       setIsAuthenticated(true);
-      setUserEmail(email);
       
       toast({
         title: 'Login successful',
@@ -83,14 +112,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      const userId = `user_${Date.now()}`;
+      const now = new Date().toISOString();
+      
       // Store auth state in localStorage
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userName', name);
       localStorage.setItem('userEmail', email);
+      localStorage.setItem('userId', userId);
+      localStorage.setItem('userCreatedAt', now);
       
+      const userData: User = {
+        id: userId,
+        email,
+        name,
+        created_at: now,
+        updated_at: now
+      };
+      
+      setUser(userData);
       setIsAuthenticated(true);
-      setUserName(name);
-      setUserEmail(email);
       
       toast({
         title: 'Registration successful',
@@ -112,10 +153,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userName');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userCreatedAt');
     
     setIsAuthenticated(false);
-    setUserEmail(null);
-    setUserName(null);
+    setUser(null);
     
     toast({
       title: 'Logged out',
@@ -128,8 +170,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return (
     <AuthContext.Provider value={{
       isAuthenticated,
-      userEmail,
-      userName,
+      user,
       login,
       register,
       logout

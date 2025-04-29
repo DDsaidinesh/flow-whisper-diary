@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -22,6 +22,7 @@ const Login: React.FC = () => {
   const { login, isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const location = useLocation();
   
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -40,9 +41,12 @@ const Login: React.FC = () => {
     }
   };
 
-  // If user is already authenticated, redirect to dashboard
+  // Get the intended destination from location state or default to dashboard
+  const from = location.state?.from || "/dashboard";
+
+  // If user is already authenticated, redirect to intended destination
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to={from} />;
   }
 
   return (
