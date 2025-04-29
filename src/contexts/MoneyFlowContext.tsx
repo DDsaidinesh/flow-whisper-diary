@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
 // Define the transaction types
 export type TransactionType = 'income' | 'expense';
@@ -18,12 +19,13 @@ export interface Transaction {
   category: string;
   type: TransactionType;
   date: string;
+  userId?: string; // Add userId field to associate with specific users
 }
 
 // Define the context interface
 interface MoneyFlowContextType {
   transactions: Transaction[];
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'userId'>) => void;
   deleteTransaction: (id: string) => void;
   clearAllTransactions: () => void;
   getBalance: () => number;
@@ -58,6 +60,7 @@ const SAMPLE_DATA: Transaction[] = [
     category: 'Salary',
     type: 'income',
     date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+    userId: 'demo@example.com',
   },
   {
     id: '2',
@@ -66,6 +69,7 @@ const SAMPLE_DATA: Transaction[] = [
     category: 'Housing',
     type: 'expense',
     date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    userId: 'demo@example.com',
   },
   {
     id: '3',
@@ -74,6 +78,7 @@ const SAMPLE_DATA: Transaction[] = [
     category: 'Food',
     type: 'expense',
     date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    userId: 'demo@example.com',
   },
   {
     id: '4',
@@ -82,6 +87,7 @@ const SAMPLE_DATA: Transaction[] = [
     category: 'Freelance',
     type: 'income',
     date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    userId: 'demo@example.com',
   },
   {
     id: '5',
@@ -90,46 +96,68 @@ const SAMPLE_DATA: Transaction[] = [
     category: 'Entertainment',
     type: 'expense',
     date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    userId: 'demo@example.com',
   },
 ];
 
 // Create the provider component
 export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const { isAuthenticated, userEmail } = useAuth();
 
-  // Load data from localStorage on component mount
+  // Load data from localStorage on component mount or when auth state changes
   useEffect(() => {
-    const savedTransactions = localStorage.getItem('moneyFlowTransactions');
-    if (savedTransactions) {
-      setTransactions(JSON.parse(savedTransactions));
+    if (isAuthenticated && userEmail) {
+      const key = `moneyFlowTransactions_${userEmail}`;
+      const savedTransactions = localStorage.getItem(key);
+      
+      if (savedTransactions) {
+        setTransactions(JSON.parse(savedTransactions));
+      } else {
+        // If no data exists for this user, use sample data
+        // In a real app, you'd probably want to start with an empty array instead
+        const userSampleData = SAMPLE_DATA.filter(t => t.userId === 'demo@example.com')
+          .map(t => ({...t, userId: userEmail}));
+        setTransactions(userSampleData);
+      }
     } else {
-      // If no data exists, use sample data
-      setTransactions(SAMPLE_DATA);
+      // Clear transactions when not authenticated
+      setTransactions([]);
     }
-  }, []);
+  }, [isAuthenticated, userEmail]);
 
   // Save data to localStorage whenever transactions change
   useEffect(() => {
-    localStorage.setItem('moneyFlowTransactions', JSON.stringify(transactions));
-  }, [transactions]);
+    if (isAuthenticated && userEmail && transactions.length > 0) {
+      const key = `moneyFlowTransactions_${userEmail}`;
+      localStorage.setItem(key, JSON.stringify(transactions));
+    }
+  }, [transactions, isAuthenticated, userEmail]);
 
   // Add a new transaction
-  const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
+  const addTransaction = (transaction: Omit<Transaction, 'id' | 'userId'>) => {
+    if (!isAuthenticated || !userEmail) return;
+
     const newTransaction = {
       ...transaction,
       id: Date.now().toString(),
+      userId: userEmail,
     };
     setTransactions(prev => [newTransaction, ...prev]);
   };
 
   // Delete a transaction
   const deleteTransaction = (id: string) => {
+    if (!isAuthenticated) return;
     setTransactions(prev => prev.filter(transaction => transaction.id !== id));
   };
 
   // Clear all transactions
   const clearAllTransactions = () => {
+    if (!isAuthenticated || !userEmail) return;
     setTransactions([]);
+    const key = `moneyFlowTransactions_${userEmail}`;
+    localStorage.removeItem(key);
   };
 
   // Get total balance

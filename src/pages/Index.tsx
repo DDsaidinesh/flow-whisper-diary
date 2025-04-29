@@ -1,24 +1,16 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Plus, DollarSign, PieChart, BarChart3 } from 'lucide-react';
+import { ArrowRight, LogIn, UserPlus, DollarSign, PieChart, BarChart3 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
-import TransactionForm from '@/components/transactions/TransactionForm';
+import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
   
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 px-4 py-8 sm:py-12 relative overflow-hidden">
@@ -30,7 +22,7 @@ const Index: React.FC = () => {
       {/* Main content container */}
       <div className="w-full max-w-5xl mx-auto flex flex-col items-center gap-8 md:gap-12 z-10">
         {/* Hero section */}
-        <div className="text-center space-y-4 max-w-2xl">
+        <div className="text-center space-y-4 max-w-3xl">
           <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 leading-tight">
             MoneyFlow Diary
           </h1>
@@ -40,7 +32,7 @@ const Index: React.FC = () => {
         </div>
 
         {/* Feature cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full">
           <Card className="border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
             <CardContent className="flex flex-col items-center p-6 text-center h-full">
               <div className="bg-blue-100 dark:bg-blue-900 p-4 rounded-full mb-4">
@@ -61,7 +53,7 @@ const Index: React.FC = () => {
             </CardContent>
           </Card>
           
-          <Card className="border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm transform transition-all duration-300 hover:scale-105 hover:shadow-xl sm:col-span-2 lg:col-span-1">
+          <Card className="border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
             <CardContent className="flex flex-col items-center p-6 text-center h-full">
               <div className="bg-green-100 dark:bg-green-900 p-4 rounded-full mb-4">
                 <PieChart className="h-6 w-6 text-green-500 dark:text-green-300" />
@@ -72,33 +64,36 @@ const Index: React.FC = () => {
           </Card>
         </div>
 
-        {/* CTA Button */}
-        <Button 
-          size="lg" 
-          onClick={() => navigate('/dashboard')}
-          className="relative px-8 py-6 text-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full"
-        >
-          Get Started <ArrowRight className="h-5 w-5 ml-2" />
-        </Button>
-
-        {/* Add Transaction floating button */}
-        <div className="fixed bottom-8 right-8 z-20">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {/* Auth buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 mt-6">
+          {isAuthenticated ? (
             <Button 
-              size="lg"
-              onClick={() => setIsDialogOpen(true)}
-              className="h-14 w-14 rounded-full shadow-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              size="lg" 
+              onClick={() => navigate('/dashboard')}
+              className="px-8 py-6 text-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full"
             >
-              <Plus className="h-6 w-6 text-white" />
-              <span className="sr-only">Add Transaction</span>
+              Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogDescription className="sr-only">
-                Add a new transaction
-              </DialogDescription>
-              <TransactionForm isDialog={true} onClose={() => setIsDialogOpen(false)} />
-            </DialogContent>
-          </Dialog>
+          ) : (
+            <>
+              <Button 
+                size="lg" 
+                onClick={() => navigate('/login')}
+                className="px-8 py-6 text-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full"
+              >
+                Login <LogIn className="ml-2 h-5 w-5" />
+              </Button>
+              
+              <Button 
+                size="lg" 
+                variant="outline"
+                onClick={() => navigate('/register')}
+                className="px-8 py-6 text-lg border-2 border-blue-500 text-blue-500 hover:bg-blue-50 shadow-lg hover:shadow-xl transition-all duration-300 rounded-full"
+              >
+                Register <UserPlus className="ml-2 h-5 w-5" />
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Footer */}
