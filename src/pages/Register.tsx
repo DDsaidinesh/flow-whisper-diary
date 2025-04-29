@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -53,7 +52,7 @@ const Register: React.FC = () => {
         description: 'Your account has been created! Please log in.',
       });
       
-      // Redirect to login page
+      // Explicitly navigate to login page
       navigate('/login');
     } catch (error) {
       console.error("Registration error:", error);

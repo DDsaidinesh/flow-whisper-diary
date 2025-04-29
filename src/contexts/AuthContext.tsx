@@ -127,13 +127,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
       
-      toast({
-        title: 'Registration successful',
-        description: 'Your account has been created! Please log in.',
-      });
+      // Success - but let the component handle navigation and toasts
+      // This allows Register component to control the flow
       
-      // Important: We don't automatically log them in
-      navigate('/login');
     } catch (error: any) {
       let errorMessage = 'There was a problem creating your account';
       
