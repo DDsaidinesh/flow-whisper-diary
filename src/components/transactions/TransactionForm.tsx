@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,12 +35,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { TransactionType, CATEGORIES, useMoneyFlow } from '@/contexts/MoneyFlowContext';
+import { TransactionType, useMoneyFlow } from '@/contexts/MoneyFlowContext';
 
 const formSchema = z.object({
   amount: z.coerce.number().positive('Amount must be greater than 0'),
   description: z.string().min(1, 'Description is required'),
-  category: z.string().min(1, 'Category is required'),
+  category_id: z.string().min(1, 'Category is required'),
   type: z.enum(['income', 'expense']),
   date: z.string().min(1, 'Date is required'),
 });
@@ -53,7 +54,7 @@ interface TransactionFormProps {
 
 const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onClose }) => {
   const { toast } = useToast();
-  const { addTransaction } = useMoneyFlow();
+  const { addTransaction, categories } = useMoneyFlow();
   const [activeType, setActiveType] = useState<TransactionType>('expense');
   const [isOpen, setIsOpen] = useState(false);
 
@@ -62,44 +63,68 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
     defaultValues: {
       amount: undefined,
       description: '',
-      category: '',
+      category_id: '',
       type: 'expense',
       date: new Date().toISOString().split('T')[0],
     },
   });
 
+  const filteredCategories = categories.filter(category => category.type === activeType);
+
   const handleTypeChange = (type: TransactionType) => {
     setActiveType(type);
     form.setValue('type', type);
-    form.setValue('category', '');
+    form.setValue('category_id', '');
   };
 
-  const onSubmit = (data: FormData) => {
-    addTransaction({
-      amount: data.amount,
-      description: data.description,
-      category: data.category,
-      type: data.type,
-      date: data.date,
-    });
-    
-    toast({
-      title: 'Transaction added!',
-      description: `${data.type === 'income' ? 'Income' : 'Expense'} of $${data.amount} recorded.`,
-    });
-    
-    form.reset({
-      amount: undefined,
-      description: '',
-      category: '',
-      type: activeType,
-      date: new Date().toISOString().split('T')[0],
-    });
-    
-    if (isDialog && onClose) {
-      onClose();
-    } else {
-      setIsOpen(false);
+  const onSubmit = async (data: FormData) => {
+    try {
+      // Find the category name for display purposes
+      const selectedCategory = categories.find(cat => cat.id === data.category_id);
+      
+      if (!selectedCategory) {
+        toast({
+          title: 'Error',
+          description: 'Selected category not found',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      await addTransaction({
+        amount: data.amount,
+        description: data.description,
+        category: selectedCategory.name, // For backward compatibility
+        category_id: data.category_id,
+        type: data.type,
+        date: data.date,
+      });
+      
+      toast({
+        title: 'Transaction added!',
+        description: `${data.type === 'income' ? 'Income' : 'Expense'} of $${data.amount} recorded.`,
+      });
+      
+      form.reset({
+        amount: undefined,
+        description: '',
+        category_id: '',
+        type: activeType,
+        date: new Date().toISOString().split('T')[0],
+      });
+      
+      if (isDialog && onClose) {
+        onClose();
+      } else {
+        setIsOpen(false);
+      }
+    } catch (error) {
+      console.error('Error submitting transaction:', error);
+      toast({
+        title: 'Error adding transaction',
+        description: 'There was a problem adding your transaction. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -171,20 +196,20 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
 
             <FormField
               control={form.control}
-              name="category"
+              name="category_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {CATEGORIES[activeType].map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                      {filteredCategories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -304,20 +329,20 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
 
               <FormField
                 control={form.control}
-                name="category"
+                name="category_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a category" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {CATEGORIES[activeType].map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                        {filteredCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -441,20 +466,20 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
 
                 <FormField
                   control={form.control}
-                  name="category"
+                  name="category_id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a category" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {CATEGORIES[activeType].map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
+                          {filteredCategories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
                             </SelectItem>
                           ))}
                         </SelectContent>

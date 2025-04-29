@@ -1,6 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 // Define the transaction types
 export type TransactionType = 'income' | 'expense';
@@ -14,6 +16,22 @@ export interface Category {
   color?: string;
   user_id?: string;
   is_default: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Define the transaction interface to match database
+export interface Transaction {
+  id: string;
+  user_id: string;
+  amount: number;
+  description: string;
+  category_id: string;
+  category?: string; // For compatibility with existing code
+  type: TransactionType;
+  date: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Define categories for each transaction type
@@ -22,7 +40,7 @@ export const CATEGORIES: Record<TransactionType, string[]> = {
   expense: ['Food', 'Housing', 'Transportation', 'Entertainment', 'Utilities', 'Healthcare', 'Shopping', 'Education', 'Personal', 'Other']
 };
 
-// Define the categories
+// Define the default categories
 export const DEFAULT_CATEGORIES: Category[] = [
   // Income categories
   { id: 'inc_salary', name: 'Salary', type: 'income', is_default: true, color: '#4caf50' },
@@ -44,31 +62,19 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'exp_other', name: 'Other', type: 'expense', is_default: true, color: '#607d8b' },
 ];
 
-// Define the transaction interface to match database
-export interface Transaction {
-  id: string;
-  user_id: string;
-  amount: number;
-  description: string;
-  category: string;
-  type: TransactionType;
-  date: string;
-  created_at: string;
-  updated_at: string;
-}
-
 // Define the context interface
 interface MoneyFlowContextType {
   transactions: Transaction[];
   categories: Category[];
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => void;
-  deleteTransaction: (id: string) => void;
-  clearAllTransactions: () => void;
-  addCategory: (category: Omit<Category, 'id' | 'user_id' | 'is_default'>) => void;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  clearAllTransactions: () => Promise<void>;
+  addCategory: (category: Omit<Category, 'id' | 'user_id' | 'is_default'>) => Promise<void>;
   getBalance: () => number;
   getIncome: () => number;
   getExpenses: () => number;
   getCategoryTotals: () => Record<string, number>;
+  migrateLocalData: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -95,119 +101,270 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { isAuthenticated, user } = useAuth();
+  const { toast } = useToast();
 
-  // Load categories
+  // Load categories from Supabase
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const loadCategories = () => {
-        // Check for user's custom categories
+    const loadCategories = async () => {
+      if (!isAuthenticated || !user) {
+        setCategories([]);
+        return;
+      }
+
+      try {
+        // Fetch categories from Supabase
+        const { data, error } = await supabase
+          .from('categories')
+          .select('*')
+          .or(`is_default.eq.true,user_id.eq.${user.id}`);
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setCategories(data as Category[]);
+        }
+      } catch (error: any) {
+        console.error('Error loading categories:', error.message);
+        // Fallback to local storage if Supabase fails
         const key = `moneyFlowCategories_${user.id}`;
         const savedCategories = localStorage.getItem(key);
         
         if (savedCategories) {
           setCategories(JSON.parse(savedCategories));
-        } else {
-          // If no custom categories, use defaults
-          const defaultCategoriesWithUserId = DEFAULT_CATEGORIES.map(cat => ({
-            ...cat,
-            user_id: user.id
-          }));
-          setCategories(defaultCategoriesWithUserId);
-          localStorage.setItem(key, JSON.stringify(defaultCategoriesWithUserId));
+          toast({
+            title: 'Offline mode',
+            description: 'Using locally stored categories due to connection issue',
+            variant: 'destructive',
+          });
         }
-      };
-      
-      loadCategories();
-    }
-  }, [isAuthenticated, user]);
+      }
+    };
+    
+    loadCategories();
+  }, [isAuthenticated, user, toast]);
 
-  // Load data from localStorage on component mount or when auth state changes
+  // Load transactions from Supabase
   useEffect(() => {
     const loadTransactions = async () => {
       setIsLoading(true);
       
-      if (isAuthenticated && user) {
+      if (!isAuthenticated || !user) {
+        setTransactions([]);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch transactions from Supabase
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('transactions')
+          .select(`
+            *,
+            categories (name)
+          `)
+          .eq('user_id', user.id)
+          .order('date', { ascending: false });
+        
+        if (transactionsError) {
+          throw transactionsError;
+        }
+        
+        if (transactionsData) {
+          // Process the fetched data to match our expected structure
+          const processedTransactions = transactionsData.map(transaction => ({
+            ...transaction,
+            category: transaction.categories?.name || '',
+          })) as Transaction[];
+          
+          setTransactions(processedTransactions);
+        }
+      } catch (error: any) {
+        console.error('Error loading transactions:', error.message);
+        
+        // Fallback to local storage if Supabase fails
         const key = `moneyFlowTransactions_${user.id}`;
         const savedTransactions = localStorage.getItem(key);
         
         if (savedTransactions) {
           setTransactions(JSON.parse(savedTransactions));
-        } else {
-          // No sample data - initialize with empty array
-          setTransactions([]);
-          localStorage.setItem(key, JSON.stringify([]));
+          toast({
+            title: 'Offline mode',
+            description: 'Using locally stored transactions due to connection issue',
+            variant: 'destructive',
+          });
         }
-      } else {
-        // Clear transactions when not authenticated
-        setTransactions([]);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
     loadTransactions();
-  }, [isAuthenticated, user]);
-
-  // Save data to localStorage whenever transactions change
-  useEffect(() => {
-    if (isAuthenticated && user && transactions.length >= 0) {
-      const key = `moneyFlowTransactions_${user.id}`;
-      localStorage.setItem(key, JSON.stringify(transactions));
-    }
-  }, [transactions, isAuthenticated, user]);
-
-  // Save categories to localStorage when they change
-  useEffect(() => {
-    if (isAuthenticated && user && categories.length > 0) {
-      const key = `moneyFlowCategories_${user.id}`;
-      localStorage.setItem(key, JSON.stringify(categories));
-    }
-  }, [categories, isAuthenticated, user]);
+  }, [isAuthenticated, user, toast]);
 
   // Add a new transaction
-  const addTransaction = (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const addTransaction = async (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!isAuthenticated || !user) return;
 
-    const now = new Date().toISOString();
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: `tx_${Date.now()}`,
-      user_id: user.id,
-      created_at: now,
-      updated_at: now,
-    };
-    setTransactions(prev => [newTransaction, ...prev]);
+    try {
+      // Find the category_id based on the category name
+      let categoryId = '';
+      
+      // Find a matching category
+      const matchingCategory = categories.find(cat => 
+        cat.name === transaction.category && cat.type === transaction.type
+      );
+      
+      if (matchingCategory) {
+        categoryId = matchingCategory.id;
+      } else {
+        // Create a new category if needed
+        const { data, error } = await supabase
+          .from('categories')
+          .insert({
+            name: transaction.category,
+            type: transaction.type,
+            user_id: user.id,
+            is_default: false
+          })
+          .select('id')
+          .single();
+          
+        if (error) throw error;
+        categoryId = data.id;
+      }
+      
+      // Insert the transaction
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          amount: transaction.amount,
+          description: transaction.description,
+          category_id: categoryId,
+          type: transaction.type,
+          date: transaction.date
+        })
+        .select(`
+          *,
+          categories (name)
+        `)
+        .single();
+        
+      if (error) throw error;
+      
+      // Update the local state
+      const newTransaction = {
+        ...data,
+        category: data.categories?.name || ''
+      } as Transaction;
+      
+      setTransactions(prev => [newTransaction, ...prev]);
+    } catch (error: any) {
+      console.error('Error adding transaction:', error.message);
+      toast({
+        title: 'Error adding transaction',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Delete a transaction
-  const deleteTransaction = (id: string) => {
+  const deleteTransaction = async (id: string) => {
     if (!isAuthenticated || !user) return;
-    setTransactions(prev => prev.filter(transaction => 
-      // Only allow deleting user's own transactions
-      transaction.user_id === user.id && transaction.id === id
-    ));
+
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setTransactions(prev => prev.filter(transaction => transaction.id !== id));
+      
+      toast({
+        title: 'Transaction deleted',
+        description: 'The transaction has been successfully deleted',
+      });
+    } catch (error: any) {
+      console.error('Error deleting transaction:', error.message);
+      toast({
+        title: 'Error deleting transaction',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Clear all transactions
-  const clearAllTransactions = () => {
+  const clearAllTransactions = async () => {
     if (!isAuthenticated || !user) return;
-    setTransactions([]);
-    const key = `moneyFlowTransactions_${user.id}`;
-    localStorage.removeItem(key);
+
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('user_id', user.id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setTransactions([]);
+      
+      toast({
+        title: 'All transactions cleared',
+        description: 'All of your transactions have been deleted',
+      });
+    } catch (error: any) {
+      console.error('Error clearing transactions:', error.message);
+      toast({
+        title: 'Error clearing transactions',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Add a new category
-  const addCategory = (category: Omit<Category, 'id' | 'user_id' | 'is_default'>) => {
+  const addCategory = async (category: Omit<Category, 'id' | 'user_id' | 'is_default'>) => {
     if (!isAuthenticated || !user) return;
     
-    const newCategory: Category = {
-      ...category,
-      id: `cat_${Date.now()}`,
-      user_id: user.id,
-      is_default: false,
-    };
-    
-    setCategories(prev => [...prev, newCategory]);
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert({
+          name: category.name,
+          type: category.type,
+          color: category.color,
+          icon: category.icon,
+          user_id: user.id,
+          is_default: false
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Update local state
+      setCategories(prev => [...prev, data as Category]);
+      
+      toast({
+        title: 'Category added',
+        description: `The category "${category.name}" has been added successfully`,
+      });
+    } catch (error: any) {
+      console.error('Error adding category:', error.message);
+      toast({
+        title: 'Error adding category',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Get total balance - filtered by current user
@@ -215,7 +372,6 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
     if (!isAuthenticated || !user) return 0;
     
     return transactions
-      .filter(transaction => transaction.user_id === user.id)
       .reduce((total, transaction) => {
         return transaction.type === 'income'
           ? total + transaction.amount
@@ -228,7 +384,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
     if (!isAuthenticated || !user) return 0;
     
     return transactions
-      .filter(transaction => transaction.user_id === user.id && transaction.type === 'income')
+      .filter(transaction => transaction.type === 'income')
       .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
@@ -237,7 +393,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
     if (!isAuthenticated || !user) return 0;
     
     return transactions
-      .filter(transaction => transaction.user_id === user.id && transaction.type === 'expense')
+      .filter(transaction => transaction.type === 'expense')
       .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
@@ -246,21 +402,85 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
     if (!isAuthenticated || !user) return {};
     
     return transactions
-      .filter(transaction => transaction.user_id === user.id && transaction.type === 'expense')
+      .filter(transaction => transaction.type === 'expense')
       .reduce((totals, transaction) => {
-        const { category, amount } = transaction;
+        const categoryName = transaction.category || '';
         return {
           ...totals,
-          [category]: (totals[category] || 0) + amount,
+          [categoryName]: (totals[categoryName] || 0) + transaction.amount,
         };
       }, {} as Record<string, number>);
+  };
+
+  // Migrate data from localStorage to Supabase
+  const migrateLocalData = async () => {
+    if (!isAuthenticated || !user) return;
+    
+    try {
+      const key = `moneyFlowTransactions_${user.id}`;
+      const savedTransactions = localStorage.getItem(key);
+      
+      if (!savedTransactions) {
+        toast({
+          title: 'No local data',
+          description: 'There is no local data to migrate',
+        });
+        return;
+      }
+      
+      const localTransactions = JSON.parse(savedTransactions);
+      
+      // Call the migration function
+      const { data, error } = await supabase
+        .rpc('migrate_local_storage_data', {
+          p_user_id: user.id,
+          p_transactions: localTransactions
+        });
+        
+      if (error) throw error;
+      
+      // Show success message
+      toast({
+        title: 'Data migration successful',
+        description: `Migrated ${data.migrated_count} transactions to the database`,
+      });
+      
+      // Reload transactions
+      const { data: newTransactions, error: fetchError } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          categories (name)
+        `)
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+        
+      if (fetchError) throw fetchError;
+      
+      if (newTransactions) {
+        // Process the fetched data to match our expected structure
+        const processedTransactions = newTransactions.map(transaction => ({
+          ...transaction,
+          category: transaction.categories?.name || '',
+        })) as Transaction[];
+        
+        setTransactions(processedTransactions);
+      }
+    } catch (error: any) {
+      console.error('Error migrating data:', error.message);
+      toast({
+        title: 'Error migrating data',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
     <MoneyFlowContext.Provider
       value={{
-        transactions: user ? transactions.filter(t => t.user_id === user.id) : [],
-        categories: user ? categories.filter(c => !c.user_id || c.user_id === user.id) : [],
+        transactions,
+        categories,
         addTransaction,
         deleteTransaction,
         clearAllTransactions,
@@ -269,6 +489,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
         getIncome,
         getExpenses,
         getCategoryTotals,
+        migrateLocalData,
         isLoading,
       }}
     >

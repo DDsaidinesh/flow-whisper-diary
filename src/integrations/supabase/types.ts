@@ -15,7 +15,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      migrate_local_storage_data: {
+        Args: { p_user_id: string; p_transactions: Json }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,23 +1,18 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-interface User {
-  id: string;
-  email: string;
-  name: string | null;
-  created_at?: string;
-  updated_at?: string;
-}
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   userEmail: string | null; 
+  session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,161 +32,150 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Check if the user is already authenticated on component mount
+  // Initialize auth state
   useEffect(() => {
-    const checkAuth = () => {
-      const auth = localStorage.getItem('isAuthenticated') === 'true';
-      if (auth) {
-        const email = localStorage.getItem('userEmail');
-        const name = localStorage.getItem('userName');
-        const userId = localStorage.getItem('userId') || `user_${Date.now()}`;
-        
-        if (email) {
-          setUser({
-            id: userId,
-            email,
-            name,
-            created_at: localStorage.getItem('userCreatedAt') || new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-          setUserEmail(email);
-          setIsAuthenticated(true);
-        }
-      }
-    };
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setIsAuthenticated(!!currentSession);
+        setUserEmail(currentSession?.user?.email ?? null);
 
-    checkAuth();
+        // For debug purposes
+        console.log('Auth state changed:', event, currentSession?.user?.email);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setIsAuthenticated(!!currentSession);
+      setUserEmail(currentSession?.user?.email ?? null);
+      
+      // For debug purposes
+      console.log('Initial session check:', currentSession?.user?.email);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Login function with enhanced error handling
   const login = async (email: string, password: string): Promise<void> => {
     try {
-      // Check if email exists in localStorage (simulating user lookup)
-      const users = getAllUsers();
-      const existingUser = users.find(u => u.email === email);
-      
-      if (!existingUser) {
-        throw new Error('User not found. Please check your email or register.');
-      }
-
-      // In a real app, you'd check password hash. This is just a simulation.
-      // Simulate a failed password (just for demonstration purposes)
-      if (password === 'wrongpassword') {
-        throw new Error('Incorrect password. Please try again.');
-      }
-      
-      // Simulate API call latency
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Store auth state in localStorage
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('userEmail', existingUser.email);
-      localStorage.setItem('userName', existingUser.name || '');
-      localStorage.setItem('userId', existingUser.id);
-      localStorage.setItem('userCreatedAt', existingUser.created_at || new Date().toISOString());
-      
-      const userData: User = {
-        id: existingUser.id,
-        email: existingUser.email,
-        name: existingUser.name,
-        created_at: existingUser.created_at,
-        updated_at: new Date().toISOString()
-      };
-      
-      setUser(userData);
-      setUserEmail(email);
-      setIsAuthenticated(true);
-      
-      toast({
-        title: 'Login successful',
-        description: 'Welcome back!',
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
       
-      navigate('/dashboard');
-    } catch (error) {
+      if (error) {
+        throw error;
+      }
+      
+      if (data.user) {
+        toast({
+          title: 'Login successful',
+          description: 'Welcome back!',
+        });
+        
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      let errorMessage = 'An unexpected error occurred';
+      
+      // Handle specific error cases
+      if (error.message) {
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Incorrect email or password. Please try again.';
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'Please confirm your email before logging in.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: 'Login failed',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        description: errorMessage,
         variant: 'destructive',
       });
+      
       throw error;
     }
-  };
-
-  // Helper function to get all users from localStorage
-  const getAllUsers = (): User[] => {
-    const usersJSON = localStorage.getItem('registeredUsers');
-    return usersJSON ? JSON.parse(usersJSON) : [];
   };
 
   // Registration function with improved error handling
   const register = async (name: string, email: string, password: string): Promise<void> => {
     try {
-      // Check if email is already registered
-      const users = getAllUsers();
-      const existingUser = users.find(u => u.email === email);
-      
-      if (existingUser) {
-        throw new Error('Email already registered. Please use a different email.');
-      }
-      
-      // Simulate API call latency
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const userId = `user_${Date.now()}`;
-      const now = new Date().toISOString();
-      
-      const newUser: User = {
-        id: userId,
+      const { data, error } = await supabase.auth.signUp({
         email,
-        name,
-        created_at: now,
-        updated_at: now
-      };
+        password,
+        options: {
+          data: {
+            name: name,
+          }
+        }
+      });
       
-      // Save user to "database" (localStorage)
-      const updatedUsers = [...users, newUser];
-      localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
+      if (error) {
+        throw error;
+      }
       
       toast({
         title: 'Registration successful',
         description: 'Your account has been created! Please log in.',
       });
       
-      // Important: We don't automatically log them in or navigate from here anymore
-      // The Register component will handle navigation to login page
-    } catch (error) {
+      // Important: We don't automatically log them in
+      navigate('/login');
+    } catch (error: any) {
+      let errorMessage = 'There was a problem creating your account';
+      
+      if (error.message) {
+        if (error.message.includes('already registered')) {
+          errorMessage = 'This email is already registered. Please use a different email.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: 'Registration failed',
-        description: error instanceof Error ? error.message : 'There was a problem creating your account',
+        description: errorMessage,
         variant: 'destructive',
       });
+      
       throw error;
     }
   };
 
-  const logout = () => {
-    // Clear auth state
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userCreatedAt');
-    
-    setIsAuthenticated(false);
-    setUser(null);
-    setUserEmail(null);
-    
-    toast({
-      title: 'Logged out',
-      description: 'You have been successfully logged out.',
-    });
-    
-    navigate('/');
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: 'Logged out',
+        description: 'You have been successfully logged out.',
+      });
+      
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        title: 'Logout failed',
+        description: error.message || 'An error occurred during logout',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -199,6 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isAuthenticated,
       user,
       userEmail,
+      session,
       login,
       register,
       logout
