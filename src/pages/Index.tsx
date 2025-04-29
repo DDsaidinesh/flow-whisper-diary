@@ -1,106 +1,108 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { ChevronRight, LineChart, PiggyBank, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, LogIn, UserPlus, DollarSign, PieChart, BarChart3 } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Index: React.FC = () => {
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const { isAuthenticated } = useAuth();
   
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 px-4 py-8 sm:py-12 relative overflow-hidden">
-      {/* Background elements */}
-      <div className="absolute top-1/4 -left-20 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply opacity-20 dark:bg-blue-700 dark:opacity-10 animate-blob"></div>
-      <div className="absolute top-1/2 -right-20 w-64 h-64 bg-purple-200 rounded-full mix-blend-multiply opacity-20 dark:bg-purple-700 dark:opacity-10 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-20 left-1/3 w-64 h-64 bg-green-200 rounded-full mix-blend-multiply opacity-20 dark:bg-green-700 dark:opacity-10 animate-blob animation-delay-4000"></div>
-
-      {/* Main content container */}
-      <div className="w-full max-w-5xl mx-auto flex flex-col items-center gap-8 md:gap-12 z-10">
-        {/* Hero section */}
-        <div className="text-center space-y-4 max-w-3xl">
-          <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 leading-tight">
-            MoneyFlow Diary
-          </h1>
-          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mx-auto max-w-xl">
-            Track your income and expenses, analyze your spending habits, and take control of your finances.
-          </p>
-        </div>
-
-        {/* Feature cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full">
-          <Card className="border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-            <CardContent className="flex flex-col items-center p-6 text-center h-full">
-              <div className="bg-blue-100 dark:bg-blue-900 p-4 rounded-full mb-4">
-                <DollarSign className="h-6 w-6 text-blue-500 dark:text-blue-300" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Track Transactions</h3>
-              <p className="text-gray-500 dark:text-gray-400">Record your daily expenses and income with ease</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-            <CardContent className="flex flex-col items-center p-6 text-center h-full">
-              <div className="bg-purple-100 dark:bg-purple-900 p-4 rounded-full mb-4">
-                <BarChart3 className="h-6 w-6 text-purple-500 dark:text-purple-300" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">View Reports</h3>
-              <p className="text-gray-500 dark:text-gray-400">Get insights into your spending patterns</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-            <CardContent className="flex flex-col items-center p-6 text-center h-full">
-              <div className="bg-green-100 dark:bg-green-900 p-4 rounded-full mb-4">
-                <PieChart className="h-6 w-6 text-green-500 dark:text-green-300" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Budget Better</h3>
-              <p className="text-gray-500 dark:text-gray-400">Make informed decisions for your financial future</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Auth buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 mt-6">
+    <div className="space-y-12 py-8">
+      {/* Hero section */}
+      <section className="text-center space-y-6">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight">
+          Track Your <span className="text-blue-500">Money Flow</span> With Ease
+        </h1>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          A simple, intuitive app to track your income, expenses, and analyze your spending habits.
+        </p>
+        <div className="flex justify-center gap-4">
           {isAuthenticated ? (
-            <Button 
-              size="lg" 
-              onClick={() => navigate('/dashboard')}
-              className="px-8 py-6 text-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full"
-            >
-              Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
+            <Button size="lg" asChild>
+              <Link to="/dashboard">
+                Go to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
           ) : (
             <>
-              <Button 
-                size="lg" 
-                onClick={() => navigate('/login')}
-                className="px-8 py-6 text-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full"
-              >
-                Login <LogIn className="ml-2 h-5 w-5" />
+              <Button size="lg" asChild>
+                <Link to="/register">
+                  Get Started <ChevronRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
-              
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => navigate('/register')}
-                className="px-8 py-6 text-lg border-2 border-blue-500 text-blue-500 hover:bg-blue-50 shadow-lg hover:shadow-xl transition-all duration-300 rounded-full"
-              >
-                Register <UserPlus className="ml-2 h-5 w-5" />
+              <Button size="lg" variant="outline" asChild>
+                <Link to="/login">Login</Link>
               </Button>
             </>
           )}
         </div>
+      </section>
 
-        {/* Footer */}
-        <footer className="text-sm text-gray-500 dark:text-gray-400 mt-auto">
-          © {new Date().getFullYear()} MoneyFlow Diary
-        </footer>
-      </div>
+      {/* Features section */}
+      <section className="py-8">
+        <h2 className="text-3xl font-bold text-center mb-10">Key Features</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+                <Wallet className="h-6 w-6 text-blue-500" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Track Transactions</h3>
+              <p className="text-gray-600">
+                Easily record your income and expenses with just a few clicks.
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                <LineChart className="h-6 w-6 text-green-500" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Analyze Spending</h3>
+              <p className="text-gray-600">
+                Visualize your spending patterns with intuitive charts and graphs.
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
+                <PiggyBank className="h-6 w-6 text-purple-500" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Financial Insights</h3>
+              <p className="text-gray-600">
+                Get insights into your financial habits and make informed decisions.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Call to action */}
+      <section className="bg-blue-50 py-12 px-4 rounded-lg text-center">
+        <h2 className="text-3xl font-bold mb-4">Ready to take control of your finances?</h2>
+        <p className="text-xl text-gray-600 mb-6 max-w-2xl mx-auto">
+          Join thousands of users who have improved their financial habits with MoneyFlow.
+        </p>
+        {isAuthenticated ? (
+          <Button size="lg" asChild>
+            <Link to="/dashboard">
+              Go to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        ) : (
+          <Button size="lg" asChild>
+            <Link to="/register">
+              Create Free Account <ChevronRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        )}
+      </section>
     </div>
   );
 };

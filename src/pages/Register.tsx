@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -8,8 +8,8 @@ import { UserPlus, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters long' }),
@@ -24,8 +24,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 const Register: React.FC = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const { register: registerUser, isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,30 +37,19 @@ const Register: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // This is a temporary simulation of registration since we don't have a backend yet
-      setTimeout(() => {
-        // Store a simple token to indicate the user is registered and logged in
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('userName', data.name);
-        localStorage.setItem('userEmail', data.email);
-        
-        toast({
-          title: 'Registration successful',
-          description: 'Your account has been created!',
-        });
-        
-        navigate('/dashboard');
-      }, 1000);
+      await registerUser(data.name, data.email, data.password);
+      // No need to navigate here as the AuthContext's register function handles redirection
     } catch (error) {
-      toast({
-        title: 'Registration failed',
-        description: 'There was a problem creating your account. Please try again.',
-        variant: 'destructive',
-      });
+      console.error("Registration error:", error);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // If user is already authenticated, redirect to dashboard
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" />;
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
