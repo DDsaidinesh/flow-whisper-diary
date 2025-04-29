@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -450,7 +449,8 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       if (error) throw error;
       
       // Parse the result properly as MigrationResult
-      const migrationResult = data as MigrationResult;
+      // First cast to unknown, then to MigrationResult to ensure type safety
+      const migrationResult = (data as unknown) as MigrationResult;
       
       // Show success message
       toast({
