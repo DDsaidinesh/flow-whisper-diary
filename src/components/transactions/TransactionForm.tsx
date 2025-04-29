@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -104,7 +103,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
     }
   };
 
-  // If it's a dialog, render just the form content
   if (isDialog) {
     return (
       <div>
@@ -226,7 +224,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
     );
   }
 
-  // Regular version with card and mobile trigger button
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

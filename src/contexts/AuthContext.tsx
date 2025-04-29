@@ -14,6 +14,7 @@ interface User {
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
+  userEmail: string | null; // Adding userEmail property
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -36,6 +37,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null); // Added userEmail state
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -56,6 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             created_at: localStorage.getItem('userCreatedAt') || new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
+          setUserEmail(email); // Set userEmail state
           setIsAuthenticated(true);
         }
       }
@@ -88,6 +91,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       
       setUser(userData);
+      setUserEmail(email); // Set userEmail state
       setIsAuthenticated(true);
       
       toast({
@@ -131,6 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       
       setUser(userData);
+      setUserEmail(email); // Set userEmail state
       setIsAuthenticated(true);
       
       toast({
@@ -158,6 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     setIsAuthenticated(false);
     setUser(null);
+    setUserEmail(null); // Reset userEmail state
     
     toast({
       title: 'Logged out',
@@ -171,6 +177,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     <AuthContext.Provider value={{
       isAuthenticated,
       user,
+      userEmail, // Include userEmail in the context value
       login,
       register,
       logout

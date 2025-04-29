@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 
@@ -15,6 +14,12 @@ export interface Category {
   user_id?: string;
   is_default: boolean;
 }
+
+// Define categories for each transaction type
+export const CATEGORIES: Record<TransactionType, string[]> = {
+  income: ['Salary', 'Freelance', 'Investments', 'Gifts', 'Other'],
+  expense: ['Food', 'Housing', 'Transportation', 'Entertainment', 'Utilities', 'Healthcare', 'Shopping', 'Education', 'Personal', 'Other']
+};
 
 // Define the categories
 export const DEFAULT_CATEGORIES: Category[] = [
