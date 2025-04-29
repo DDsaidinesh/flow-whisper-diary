@@ -19,7 +19,18 @@ type ToastContextType = {
   dismiss: (id: number) => void
 }
 
-const ToastContext = createContext<ToastContextType | undefined>(undefined)
+// Create a context with a default value that won't throw errors if used outside provider
+const defaultToastContext: ToastContextType = {
+  toasts: [],
+  toast: () => {
+    console.warn("Toast called outside of ToastProvider - this won't display anything")
+  },
+  dismiss: () => {
+    console.warn("Dismiss called outside of ToastProvider - this won't do anything")
+  },
+}
+
+const ToastContext = createContext<ToastContextType>(defaultToastContext)
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([])
@@ -59,14 +70,12 @@ export const useToast = () => {
 
 // Helper function to display a toast directly without the hook
 export const toast = (props: ToastProps) => {
-  // We can't use this outside of the provider context, so this function should only be called
-  // from components that are inside the ToastProvider
-  const toastContext = useContext(ToastContext)
-  if (!toastContext) {
-    console.error("Toast function called outside of ToastProvider")
-    return
+  try {
+    const toastContext = useContext(ToastContext)
+    toastContext.toast(props)
+  } catch (error) {
+    console.error("Toast function called outside of ToastProvider", error)
   }
-  toastContext.toast(props)
 }
 
 export default useToast
