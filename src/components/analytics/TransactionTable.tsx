@@ -210,7 +210,7 @@ const TransactionTable = () => {
                   <TableCell>{transaction.category}</TableCell>
                   <TableCell className="text-right">
                     <span className={transaction.type === 'income' ? 'text-flow-green' : 'text-flow-red'}>
-                      {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                      {transaction.type === 'income' ? '+' : '-'}₹{transaction.amount.toFixed(2)}
                     </span>
                   </TableCell>
                 </TableRow>

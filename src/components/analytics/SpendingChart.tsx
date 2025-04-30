@@ -57,7 +57,7 @@ const SpendingChart: React.FC = () => {
               </Pie>
               <Legend />
               <Tooltip 
-                formatter={(value) => [`$${value}`, 'Amount']}
+                formatter={(value) => [`₹${value}`, 'Amount']}
               />
             </PieChart>
           </ResponsiveContainer>

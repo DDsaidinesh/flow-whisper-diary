@@ -137,7 +137,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onDelete
             type === 'income' ? 'text-flow-green' : 'text-flow-red'
           )}
         >
-          {type === 'income' ? '+' : '-'}${amount.toFixed(2)}
+          {type === 'income' ? '+' : '-'}₹{amount.toFixed(2)}
         </span>
         
         <Button

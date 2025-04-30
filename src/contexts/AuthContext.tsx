@@ -10,6 +10,7 @@ interface AuthContextType {
   user: User | null;
   userEmail: string | null; 
   session: Session | null;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -35,31 +36,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   // Initialize auth state
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        console.log('Auth state changed:', event, currentSession?.user?.email);
-        
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setIsAuthenticated(!!currentSession);
-        setUserEmail(currentSession?.user?.email ?? null);
-
-        // Handle specific auth events
-        if (event === 'SIGNED_OUT') {
-          console.log('User signed out');
-        } else if (event === 'TOKEN_REFRESHED') {
-          console.log('Token refreshed successfully');
-        }
-      }
-    );
-
-    // THEN check for existing session
+    setIsLoading(true);
+    
+    // Check for existing session first
     const initializeAuth = async () => {
       try {
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
@@ -69,23 +54,63 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           throw error;
         }
 
-        console.log('Initial session check:', currentSession?.user?.email || 'No active session');
-        
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setIsAuthenticated(!!currentSession);
-        setUserEmail(currentSession?.user?.email ?? null);
+        if (currentSession) {
+          console.log('Initial session found:', currentSession.user?.email);
+          setSession(currentSession);
+          setUser(currentSession.user);
+          setIsAuthenticated(true);
+          setUserEmail(currentSession.user?.email ?? null);
+        } else {
+          console.log('No active session found');
+          setSession(null);
+          setUser(null);
+          setIsAuthenticated(false);
+          setUserEmail(null);
+        }
       } catch (error) {
         console.error('Session initialization error:', error);
+        // Reset auth state on error
+        setSession(null);
+        setUser(null);
+        setIsAuthenticated(false);
+        setUserEmail(null);
       } finally {
         setIsInitialized(true);
+        setIsLoading(false);
       }
     };
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        console.log('Auth state changed:', event, currentSession?.user?.email);
+        
+        if (currentSession) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          setIsAuthenticated(true);
+          setUserEmail(currentSession.user?.email ?? null);
+        } else {
+          setSession(null);
+          setUser(null);
+          setIsAuthenticated(false);
+          setUserEmail(null);
+        }
+
+        // Handle specific auth events
+        if (event === 'SIGNED_OUT') {
+          console.log('User signed out');
+          navigate('/');
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed successfully');
+        }
+      }
+    );
 
     initializeAuth();
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   // Login function with enhanced error handling
   const login = async (email: string, password: string): Promise<void> => {
@@ -208,6 +233,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       user,
       userEmail,
       session,
+      isLoading,
       login,
       register,
       logout

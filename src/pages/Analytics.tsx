@@ -116,7 +116,7 @@ const Analytics: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip formatter={(value) => `$${value}`} />
+                  <Tooltip formatter={(value) => `₹${value}`} />
                   <Legend />
                   <Bar dataKey="income" name="Income" fill="#4CAF50" />
                   <Bar dataKey="expense" name="Expense" fill="#FF6B6B" />

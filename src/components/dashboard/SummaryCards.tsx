@@ -22,7 +22,7 @@ const SummaryCards: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-500">Current Balance</p>
               <h3 className={`text-2xl font-bold ${balance >= 0 ? 'text-flow-blue' : 'text-flow-red'}`}>
-                ${balance.toFixed(2)}
+                ₹{balance.toFixed(2)}
               </h3>
             </div>
           </div>
@@ -38,7 +38,7 @@ const SummaryCards: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-500">Total Income</p>
               <h3 className="text-2xl font-bold text-flow-green">
-                ${income.toFixed(2)}
+                ₹{income.toFixed(2)}
               </h3>
             </div>
           </div>
@@ -54,7 +54,7 @@ const SummaryCards: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-500">Total Expenses</p>
               <h3 className="text-2xl font-bold text-flow-red">
-                ${expenses.toFixed(2)}
+                ₹{expenses.toFixed(2)}
               </h3>
             </div>
           </div>

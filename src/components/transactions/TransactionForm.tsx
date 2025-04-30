@@ -164,7 +164,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount ($)</FormLabel>
+                  <FormLabel>Amount (₹)</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="0.00"
@@ -297,7 +297,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount ($)</FormLabel>
+                    <FormLabel>Amount (₹)</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="0.00"
@@ -420,7 +420,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
                     name="amount"
                     render={({ field }) => (
                       <FormItem className="flex-1">
-                        <FormLabel>Amount ($)</FormLabel>
+                        <FormLabel>Amount (₹)</FormLabel>
                         <FormControl>
                           <Input
                             placeholder="0.00"

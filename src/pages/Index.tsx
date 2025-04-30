@@ -56,17 +56,7 @@ const Index: React.FC = () => {
                 Get Started
                 <ChevronRight className="ml-2 h-5 w-5" />
               </Button>
-              {isAuthenticated ? (
-                <Button
-                  onClick={handleMigration}
-                  variant="outline" 
-                  size="lg" 
-                  className="text-lg bg-white text-blue-600 hover:bg-gray-100"
-                >
-                  <Database className="mr-2 h-5 w-5" />
-                  Migrate Local Data to Supabase
-                </Button>
-              ) : (
+              {!isAuthenticated && (
                 <Button 
                   onClick={() => navigate('/login')} 
                   variant="outline" 
