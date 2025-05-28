@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PlusCircle, MinusCircle, Plus } from 'lucide-react';
+import { PlusCircle, MinusCircle, Plus, Wallet, TrendingUp, TrendingDown, Calendar, Tag, DollarSign } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,7 +78,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
 
   const onSubmit = async (data: FormData) => {
     try {
-      // Find the category name for display purposes
       const selectedCategory = categories.find(cat => cat.id === data.category_id);
       
       if (!selectedCategory) {
@@ -94,15 +92,15 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
       await addTransaction({
         amount: data.amount,
         description: data.description,
-        category: selectedCategory.name, // For backward compatibility
+        category: selectedCategory.name,
         category_id: data.category_id,
         type: data.type,
         date: data.date,
       });
       
       toast({
-        title: 'Transaction added!',
-        description: `${data.type === 'income' ? 'Income' : 'Expense'} of $${data.amount} recorded.`,
+        title: '✅ Transaction Added!',
+        description: `${data.type === 'income' ? 'Income' : 'Expense'} of ₹${data.amount} recorded successfully.`,
       });
       
       form.reset({
@@ -128,51 +126,113 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
     }
   };
 
+  // Quick amount buttons for mobile
+  const quickAmounts = [50, 100, 200, 500, 1000, 2000];
+
+  const setQuickAmount = (amount: number) => {
+    form.setValue('amount', amount);
+  };
+
   if (isDialog) {
     return (
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Add New Transaction</h2>
+      <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Add Transaction
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">Track your money flow</p>
+        </div>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="flex gap-2 mb-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Type Selection with Enhanced Design */}
+            <div className="grid grid-cols-2 gap-3">
               <Button
                 type="button"
                 variant={activeType === 'expense' ? 'default' : 'outline'}
-                className={`flex-1 gap-2 ${
-                  activeType === 'expense' ? 'bg-flow-red hover:bg-flow-red-dark' : ''
+                className={`h-16 flex flex-col gap-2 transition-all duration-300 ${
+                  activeType === 'expense' 
+                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg scale-105' 
+                    : 'hover:bg-red-50 hover:border-red-200'
                 }`}
                 onClick={() => handleTypeChange('expense')}
               >
-                <MinusCircle className="h-4 w-4" />
-                Expense
+                <TrendingDown className="h-5 w-5" />
+                <span className="text-sm font-medium">Expense</span>
               </Button>
               <Button
                 type="button"
                 variant={activeType === 'income' ? 'default' : 'outline'}
-                className={`flex-1 gap-2 ${
-                  activeType === 'income' ? 'bg-flow-green hover:bg-flow-green-dark' : ''
+                className={`h-16 flex flex-col gap-2 transition-all duration-300 ${
+                  activeType === 'income' 
+                    ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg scale-105' 
+                    : 'hover:bg-green-50 hover:border-green-200'
                 }`}
                 onClick={() => handleTypeChange('income')}
               >
-                <PlusCircle className="h-4 w-4" />
-                Income
+                <TrendingUp className="h-5 w-5" />
+                <span className="text-sm font-medium">Income</span>
               </Button>
             </div>
 
+            {/* Amount Field with Quick Buttons */}
             <FormField
               control={form.control}
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount (₹)</FormLabel>
+                  <FormLabel className="flex items-center gap-2 text-base font-medium">
+                    <DollarSign className="h-4 w-4" />
+                    Amount (₹)
+                  </FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="0.00"
-                      type="number"
-                      step="0.01"
-                      inputMode="decimal"
-                      {...field}
-                      value={field.value || ''}
+                    <div className="space-y-3">
+                      <Input
+                        placeholder="Enter amount"
+                        type="number"
+                        step="0.01"
+                        inputMode="decimal"
+                        className="h-14 text-lg text-center font-medium"
+                        {...field}
+                        value={field.value || ''}
+                      />
+                      {/* Quick Amount Buttons */}
+                      <div className="grid grid-cols-3 gap-2">
+                        {quickAmounts.map((amount) => (
+                          <Button
+                            key={amount}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-10 text-xs hover:bg-blue-50 hover:border-blue-200"
+                            onClick={() => setQuickAmount(amount)}
+                          >
+                            ₹{amount}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Description */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2 text-base font-medium">
+                    <Tag className="h-4 w-4" />
+                    Description
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="What was this for?" 
+                      className="h-12 text-base" 
+                      {...field} 
                     />
                   </FormControl>
                   <FormMessage />
@@ -180,36 +240,32 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Input placeholder="What was this for?" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
+            {/* Category */}
             <FormField
               control={form.control}
               name="category_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel className="flex items-center gap-2 text-base font-medium">
+                    <Wallet className="h-4 w-4" />
+                    Category
+                  </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
+                      <SelectTrigger className="h-12 text-base">
+                        <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {filteredCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
+                        <SelectItem key={category.id} value={category.id} className="py-3">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: category.color || '#6b7280' }}
+                            />
+                            {category.name}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -219,29 +275,34 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
               )}
             />
 
+            {/* Date */}
             <FormField
               control={form.control}
               name="date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel className="flex items-center gap-2 text-base font-medium">
+                    <Calendar className="h-4 w-4" />
+                    Date
+                  </FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" className="h-12 text-base" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
+            {/* Submit Button */}
             <Button 
               type="submit" 
-              className={`w-full mt-6 ${
+              className={`w-full h-14 text-lg font-medium transition-all duration-300 ${
                 activeType === 'expense' 
-                  ? 'bg-flow-red hover:bg-flow-red-dark' 
-                  : 'bg-flow-green hover:bg-flow-green-dark'
+                  ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg hover:shadow-xl' 
+                  : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl'
               }`}
             >
-              Add {activeType === 'income' ? 'Income' : 'Expense'}
+              {activeType === 'income' ? '+ Add Income' : '- Add Expense'}
             </Button>
           </form>
         </Form>
@@ -251,256 +312,36 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
 
   return (
     <>
+      {/* Floating Action Button for Mobile */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button 
             size="lg"
-            className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg md:hidden"
+            className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-2xl md:hidden bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-4 border-white z-50 transition-all duration-300 hover:scale-110"
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-8 w-8" />
             <span className="sr-only">Add Transaction</span>
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New Transaction</DialogTitle>
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="text-center pb-4">
+            <DialogTitle className="text-xl font-bold">Add New Transaction</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="flex gap-2 mb-4">
-                <Button
-                  type="button"
-                  variant={activeType === 'expense' ? 'default' : 'outline'}
-                  className={`flex-1 gap-2 ${
-                    activeType === 'expense' ? 'bg-flow-red hover:bg-flow-red-dark' : ''
-                  }`}
-                  onClick={() => handleTypeChange('expense')}
-                >
-                  <MinusCircle className="h-4 w-4" />
-                  Expense
-                </Button>
-                <Button
-                  type="button"
-                  variant={activeType === 'income' ? 'default' : 'outline'}
-                  className={`flex-1 gap-2 ${
-                    activeType === 'income' ? 'bg-flow-green hover:bg-flow-green-dark' : ''
-                  }`}
-                  onClick={() => handleTypeChange('income')}
-                >
-                  <PlusCircle className="h-4 w-4" />
-                  Income
-                </Button>
-              </div>
-
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount (₹)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="0.00"
-                        type="number"
-                        step="0.01"
-                        inputMode="decimal"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input placeholder="What was this for?" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="category_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {filteredCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button 
-                type="submit" 
-                className={`w-full mt-6 ${
-                  activeType === 'expense' 
-                    ? 'bg-flow-red hover:bg-flow-red-dark' 
-                    : 'bg-flow-green hover:bg-flow-green-dark'
-                }`}
-              >
-                Add {activeType === 'income' ? 'Income' : 'Expense'}
-              </Button>
-            </form>
-          </Form>
+          <TransactionForm isDialog={true} onClose={() => setIsOpen(false)} />
         </DialogContent>
       </Dialog>
 
+      {/* Desktop Version */}
       <div className="hidden md:block">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-lg font-medium">Add New Transaction</CardTitle>
+        <Card className="w-full shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+          <CardHeader className="text-center pb-6">
+            <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Add New Transaction
+            </CardTitle>
+            <p className="text-sm text-gray-500">Track your money flow</p>
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="flex gap-4 mb-6">
-                  <Button
-                    type="button"
-                    variant={activeType === 'expense' ? 'default' : 'outline'}
-                    className={`flex-1 gap-2 ${
-                      activeType === 'expense' ? 'bg-flow-red hover:bg-flow-red-dark' : ''
-                    }`}
-                    onClick={() => handleTypeChange('expense')}
-                  >
-                    <MinusCircle className="h-4 w-4" />
-                    Expense
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={activeType === 'income' ? 'default' : 'outline'}
-                    className={`flex-1 gap-2 ${
-                      activeType === 'income' ? 'bg-flow-green hover:bg-flow-green-dark' : ''
-                    }`}
-                    onClick={() => handleTypeChange('income')}
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                    Income
-                  </Button>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <FormField
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormLabel>Amount (₹)</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="0.00"
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            value={field.value || ''}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="date"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormLabel>Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input placeholder="What was this for?" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="category_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {filteredCategories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button 
-                  type="submit" 
-                  className={`w-full mt-6 ${
-                    activeType === 'expense' 
-                      ? 'bg-flow-red hover:bg-flow-red-dark' 
-                      : 'bg-flow-green hover:bg-flow-green-dark'
-                  }`}
-                >
-                  Add {activeType === 'income' ? 'Income' : 'Expense'}
-                </Button>
-              </form>
-            </Form>
+            <TransactionForm isDialog={true} />
           </CardContent>
         </Card>
       </div>
