@@ -9,6 +9,120 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      account_types: {
+        Row: {
+          id: string
+          user_id: string | null
+          name: string
+          category: string
+          description: string | null
+          icon: string | null
+          color: string | null
+          is_default: boolean
+          is_system: boolean
+          affects_net_worth: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          name: string
+          category: string
+          description?: string | null
+          icon?: string | null
+          color?: string | null
+          is_default?: boolean
+          is_system?: boolean
+          affects_net_worth?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          name?: string
+          category?: string
+          description?: string | null
+          icon?: string | null
+          color?: string | null
+          is_default?: boolean
+          is_system?: boolean
+          affects_net_worth?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      accounts: {
+        Row: {
+          id: string
+          user_id: string
+          account_type_id: string
+          name: string
+          balance: number
+          initial_balance: number
+          currency: string
+          description: string | null
+          is_active: boolean
+          is_default: boolean
+          color: string | null
+          icon: string | null
+          account_number: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          account_type_id: string
+          name: string
+          balance?: number
+          initial_balance?: number
+          currency?: string
+          description?: string | null
+          is_active?: boolean
+          is_default?: boolean
+          color?: string | null
+          icon?: string | null
+          account_number?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          account_type_id?: string
+          name?: string
+          balance?: number
+          initial_balance?: number
+          currency?: string
+          description?: string | null
+          is_active?: boolean
+          is_default?: boolean
+          color?: string | null
+          icon?: string | null
+          account_number?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_account_type_id_fkey"
+            columns: ["account_type_id"]
+            isOneToOne: false
+            referencedRelation: "account_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       budget_goals: {
         Row: {
           amount: number
@@ -118,6 +232,8 @@ export type Database = {
           type: string
           updated_at: string
           user_id: string
+          from_account_id: string | null
+          to_account_id: string | null
         }
         Insert: {
           amount: number
@@ -129,6 +245,8 @@ export type Database = {
           type: string
           updated_at?: string
           user_id: string
+          from_account_id?: string | null
+          to_account_id?: string | null
         }
         Update: {
           amount?: number
@@ -140,6 +258,8 @@ export type Database = {
           type?: string
           updated_at?: string
           user_id?: string
+          from_account_id?: string | null
+          to_account_id?: string | null
         }
         Relationships: [
           {
@@ -149,6 +269,89 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transactions_from_account_id_fkey"
+            columns: ["from_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transaction_tags: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          color: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          color?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          color?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_tags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transaction_tag_assignments: {
+        Row: {
+          transaction_id: string
+          tag_id: string
+        }
+        Insert: {
+          transaction_id: string
+          tag_id: string
+        }
+        Update: {
+          transaction_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_tag_assignments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_tag_assignments_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_tags"
+            referencedColumns: ["id"]
+          }
         ]
       }
       user_settings: {
@@ -183,6 +386,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_default_account_types: {
+        Args: { user_uuid: string }
+        Returns: undefined
+      }
+      create_default_accounts: {
+        Args: { user_uuid: string }
+        Returns: undefined
+      }
       migrate_local_storage_data: {
         Args: { p_user_id: string; p_transactions: Json }
         Returns: Json

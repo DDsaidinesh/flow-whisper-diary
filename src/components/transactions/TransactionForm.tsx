@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PlusCircle, MinusCircle, Plus, Wallet, TrendingUp, TrendingDown, Calendar, Tag, DollarSign } from 'lucide-react';
+import { PlusCircle, MinusCircle, ArrowRightLeft, Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,25 +35,48 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { TransactionType, useMoneyFlow } from '@/contexts/MoneyFlowContext';
+import { useAccounts } from '@/contexts/AccountContext';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 
 const formSchema = z.object({
   amount: z.coerce.number().positive('Amount must be greater than 0'),
   description: z.string().min(1, 'Description is required'),
   category_id: z.string().min(1, 'Category is required'),
-  type: z.enum(['income', 'expense']),
+  type: z.enum(['income', 'expense', 'transfer']),
   date: z.string().min(1, 'Date is required'),
+  from_account_id: z.string().optional(),
+  to_account_id: z.string().optional(),
+}).refine((data) => {
+  // For income transactions, to_account_id is required
+  if (data.type === 'income' && !data.to_account_id) {
+    return false;
+  }
+  // For expense transactions, from_account_id is required
+  if (data.type === 'expense' && !data.from_account_id) {
+    return false;
+  }
+  // For transfer transactions, both accounts are required and must be different
+  if (data.type === 'transfer' && (!data.from_account_id || !data.to_account_id || data.from_account_id === data.to_account_id)) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please select appropriate accounts for this transaction type",
+  path: ["from_account_id"]
 });
 
 type FormData = z.infer<typeof formSchema>;
 
-interface TransactionFormProps {
+interface EnhancedTransactionFormProps {
   isDialog?: boolean;
   onClose?: () => void;
 }
 
-const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onClose }) => {
+const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = ({ isDialog = false, onClose }) => {
   const { toast } = useToast();
   const { addTransaction, categories } = useMoneyFlow();
+  const { accounts } = useAccounts();
   const [activeType, setActiveType] = useState<TransactionType>('expense');
   const [isOpen, setIsOpen] = useState(false);
 
@@ -65,6 +88,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
       category_id: '',
       type: 'expense',
       date: new Date().toISOString().split('T')[0],
+      from_account_id: '',
+      to_account_id: '',
     },
   });
 
@@ -74,13 +99,28 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
     setActiveType(type);
     form.setValue('type', type);
     form.setValue('category_id', '');
+    form.setValue('from_account_id', '');
+    form.setValue('to_account_id', '');
   };
+
+  // Set default accounts when accounts are loaded
+  useEffect(() => {
+    if (accounts.length > 0 && !form.getValues('from_account_id') && !form.getValues('to_account_id')) {
+      const defaultAccount = accounts.find(acc => acc.is_default) || accounts[0];
+      if (activeType === 'expense') {
+        form.setValue('from_account_id', defaultAccount.id);
+      } else if (activeType === 'income') {
+        form.setValue('to_account_id', defaultAccount.id);
+      }
+    }
+  }, [accounts, activeType, form]);
 
   const onSubmit = async (data: FormData) => {
     try {
+      // Find the category name for display purposes
       const selectedCategory = categories.find(cat => cat.id === data.category_id);
       
-      if (!selectedCategory) {
+      if (!selectedCategory && data.type !== 'transfer') {
         toast({
           title: 'Error',
           description: 'Selected category not found',
@@ -92,15 +132,23 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
       await addTransaction({
         amount: data.amount,
         description: data.description,
-        category: selectedCategory.name,
-        category_id: data.category_id,
+        category: selectedCategory?.name || 'Transfer', // For backward compatibility
+        category_id: data.category_id || null,
         type: data.type,
         date: data.date,
+        from_account_id: data.from_account_id || null,
+        to_account_id: data.to_account_id || null,
       });
       
+      const typeLabels = {
+        income: 'Income',
+        expense: 'Expense',
+        transfer: 'Transfer'
+      };
+      
       toast({
-        title: '✅ Transaction Added!',
-        description: `${data.type === 'income' ? 'Income' : 'Expense'} of ₹${data.amount} recorded successfully.`,
+        title: 'Transaction added!',
+        description: `${typeLabels[data.type]} of ₹${data.amount} recorded.`,
       });
       
       form.reset({
@@ -109,6 +157,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
         category_id: '',
         type: activeType,
         date: new Date().toISOString().split('T')[0],
+        from_account_id: activeType === 'expense' ? (accounts.find(acc => acc.is_default) || accounts[0])?.id : '',
+        to_account_id: activeType === 'income' ? (accounts.find(acc => acc.is_default) || accounts[0])?.id : '',
       });
       
       if (isDialog && onClose) {
@@ -126,145 +176,170 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
     }
   };
 
-  // Quick amount buttons for mobile
-  const quickAmounts = [50, 100, 200, 500, 1000, 2000];
-
-  const setQuickAmount = (amount: number) => {
-    form.setValue('amount', amount);
-  };
-
-  if (isDialog) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Add Transaction
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">Track your money flow</p>
+  const TransactionFormContent = () => (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="flex gap-2 mb-4">
+          <Button
+            type="button"
+            variant={activeType === 'expense' ? 'default' : 'outline'}
+            className={`flex-1 gap-2 ${
+              activeType === 'expense' ? 'bg-flow-red hover:bg-flow-red-dark' : ''
+            }`}
+            onClick={() => handleTypeChange('expense')}
+          >
+            <MinusCircle className="h-4 w-4" />
+            Expense
+          </Button>
+          <Button
+            type="button"
+            variant={activeType === 'income' ? 'default' : 'outline'}
+            className={`flex-1 gap-2 ${
+              activeType === 'income' ? 'bg-flow-green hover:bg-flow-green-dark' : ''
+            }`}
+            onClick={() => handleTypeChange('income')}
+          >
+            <PlusCircle className="h-4 w-4" />
+            Income
+          </Button>
+          <Button
+            type="button"
+            variant={activeType === 'transfer' ? 'default' : 'outline'}
+            className={`flex-1 gap-2 ${
+              activeType === 'transfer' ? 'bg-flow-blue hover:bg-flow-blue-dark' : ''
+            }`}
+            onClick={() => handleTypeChange('transfer')}
+          >
+            <ArrowRightLeft className="h-4 w-4" />
+            Transfer
+          </Button>
         </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Type Selection with Enhanced Design */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                type="button"
-                variant={activeType === 'expense' ? 'default' : 'outline'}
-                className={`h-16 flex flex-col gap-2 transition-all duration-300 ${
-                  activeType === 'expense' 
-                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg scale-105' 
-                    : 'hover:bg-red-50 hover:border-red-200'
-                }`}
-                onClick={() => handleTypeChange('expense')}
-              >
-                <TrendingDown className="h-5 w-5" />
-                <span className="text-sm font-medium">Expense</span>
-              </Button>
-              <Button
-                type="button"
-                variant={activeType === 'income' ? 'default' : 'outline'}
-                className={`h-16 flex flex-col gap-2 transition-all duration-300 ${
-                  activeType === 'income' 
-                    ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg scale-105' 
-                    : 'hover:bg-green-50 hover:border-green-200'
-                }`}
-                onClick={() => handleTypeChange('income')}
-              >
-                <TrendingUp className="h-5 w-5" />
-                <span className="text-sm font-medium">Income</span>
-              </Button>
-            </div>
+        <FormField
+          control={form.control}
+          name="amount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Amount (₹)</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="0.00"
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  {...field}
+                  value={field.value || ''}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            {/* Amount Field with Quick Buttons */}
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-base font-medium">
-                    <DollarSign className="h-4 w-4" />
-                    Amount (₹)
-                  </FormLabel>
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Input placeholder="What was this for?" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Account Selection */}
+        {activeType === 'expense' && (
+          <FormField
+            control={form.control}
+            name="from_account_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>From Account</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <div className="space-y-3">
-                      <Input
-                        placeholder="Enter amount"
-                        type="number"
-                        step="0.01"
-                        inputMode="decimal"
-                        className="h-14 text-lg text-center font-medium"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                      {/* Quick Amount Buttons */}
-                      <div className="grid grid-cols-3 gap-2">
-                        {quickAmounts.map((amount) => (
-                          <Button
-                            key={amount}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-10 text-xs hover:bg-blue-50 hover:border-blue-200"
-                            onClick={() => setQuickAmount(amount)}
-                          >
-                            ₹{amount}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select account to pay from" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  <SelectContent>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{account.name}</span>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{account.account_type?.name}</Badge>
+                            <span className="text-sm">₹{account.balance.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-base font-medium">
-                    <Tag className="h-4 w-4" />
-                    Description
-                  </FormLabel>
+        {activeType === 'income' && (
+          <FormField
+            control={form.control}
+            name="to_account_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>To Account</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <Input 
-                      placeholder="What was this for?" 
-                      className="h-12 text-base" 
-                      {...field} 
-                    />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select account to receive money" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  <SelectContent>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{account.name}</span>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{account.account_type?.name}</Badge>
+                            <span className="text-sm">₹{account.balance.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
-            {/* Category */}
+        {activeType === 'transfer' && (
+          <>
             <FormField
               control={form.control}
-              name="category_id"
+              name="from_account_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-base font-medium">
-                    <Wallet className="h-4 w-4" />
-                    Category
-                  </FormLabel>
+                  <FormLabel>From Account</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="h-12 text-base">
-                        <SelectValue placeholder="Select category" />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select source account" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {filteredCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.id} className="py-3">
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: category.color || '#6b7280' }}
-                            />
-                            {category.name}
+                      {accounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{account.name}</span>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">{account.account_type?.name}</Badge>
+                              <span className="text-sm">₹{account.balance.toLocaleString()}</span>
+                            </div>
                           </div>
                         </SelectItem>
                       ))}
@@ -275,73 +350,133 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
               )}
             />
 
-            {/* Date */}
             <FormField
               control={form.control}
-              name="date"
+              name="to_account_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-base font-medium">
-                    <Calendar className="h-4 w-4" />
-                    Date
-                  </FormLabel>
-                  <FormControl>
-                    <Input type="date" className="h-12 text-base" {...field} />
-                  </FormControl>
+                  <FormLabel>To Account</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select destination account" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {accounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{account.name}</span>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">{account.account_type?.name}</Badge>
+                              <span className="text-sm">₹{account.balance.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+          </>
+        )}
 
-            {/* Submit Button */}
-            <Button 
-              type="submit" 
-              className={`w-full h-14 text-lg font-medium transition-all duration-300 ${
-                activeType === 'expense' 
-                  ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg hover:shadow-xl' 
-                  : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl'
-              }`}
-            >
-              {activeType === 'income' ? '+ Add Income' : '- Add Expense'}
-            </Button>
-          </form>
-        </Form>
+        {/* Category Selection - Not needed for transfers */}
+        {activeType !== 'transfer' && (
+          <FormField
+            control={form.control}
+            name="category_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Category</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {filteredCategories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        <FormField
+          control={form.control}
+          name="date"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date</FormLabel>
+              <FormControl>
+                <Input type="date" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button 
+          type="submit" 
+          className={`w-full mt-6 ${
+            activeType === 'expense' 
+              ? 'bg-flow-red hover:bg-flow-red-dark' 
+              : activeType === 'income'
+              ? 'bg-flow-green hover:bg-flow-green-dark'
+              : 'bg-flow-blue hover:bg-flow-blue-dark'
+          }`}
+        >
+          Add {activeType === 'income' ? 'Income' : activeType === 'expense' ? 'Expense' : 'Transfer'}
+        </Button>
+      </form>
+    </Form>
+  );
+
+  if (isDialog) {
+    return (
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Add New Transaction</h2>
+        <TransactionFormContent />
       </div>
     );
   }
 
   return (
     <>
-      {/* Floating Action Button for Mobile */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button 
             size="lg"
-            className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-2xl md:hidden bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-4 border-white z-50 transition-all duration-300 hover:scale-110"
+            className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg md:hidden"
           >
-            <Plus className="h-8 w-8" />
+            <Plus className="h-6 w-6" />
             <span className="sr-only">Add Transaction</span>
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="text-center pb-4">
-            <DialogTitle className="text-xl font-bold">Add New Transaction</DialogTitle>
+          <DialogHeader>
+            <DialogTitle>Add New Transaction</DialogTitle>
           </DialogHeader>
-          <TransactionForm isDialog={true} onClose={() => setIsOpen(false)} />
+          <TransactionFormContent />
         </DialogContent>
       </Dialog>
 
-      {/* Desktop Version */}
       <div className="hidden md:block">
-        <Card className="w-full shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-          <CardHeader className="text-center pb-6">
-            <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Add New Transaction
-            </CardTitle>
-            <p className="text-sm text-gray-500">Track your money flow</p>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium">Add New Transaction</CardTitle>
           </CardHeader>
           <CardContent>
-            <TransactionForm isDialog={true} />
+            <TransactionFormContent />
           </CardContent>
         </Card>
       </div>
@@ -349,4 +484,4 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
   );
 };
 
-export default TransactionForm;
+export default EnhancedTransactionForm;

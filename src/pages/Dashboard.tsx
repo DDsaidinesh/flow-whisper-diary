@@ -1,293 +1,204 @@
-import React, { useState } from 'react';
-import TransactionForm from '@/components/transactions/TransactionForm';
-import { useMoneyFlow } from '@/contexts/MoneyFlowContext';
+import React from 'react';
+import EnhancedTransactionForm from '@/components/transactions/TransactionForm';
+import TransactionList from '@/components/transactions/TransactionList';
+import EnhancedSummaryCards from '@/components/dashboard/SummaryCards';
+import SpendingChart from '@/components/analytics/SpendingChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  BookOpen, 
-  TrendingUp, 
-  TrendingDown, 
-  Wallet, 
-  Calendar,
-  PlusCircle,
-  Eye,
-  EyeOff,
-  FileText,
-  PieChart,
-  Target,
-  Clock
-} from 'lucide-react';
-import { format, isToday, isYesterday, startOfWeek, endOfWeek } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, Plus, TrendingUp, CreditCard } from 'lucide-react';
+import { useAccounts } from '@/contexts/AccountContext';
+import { useMoneyFlow } from '@/contexts/MoneyFlowContext';
 
-const Dashboard: React.FC = () => {
-  const { transactions, getBalance, getIncome, getExpenses } = useMoneyFlow();
-  const [showBalance, setShowBalance] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+const EnhancedDashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const { accounts } = useAccounts();
+  const { transactions } = useMoneyFlow();
 
-  const balance = getBalance();
-  const income = getIncome();
-  const expenses = getExpenses();
+  // Recent transactions (last 5)
+  const recentTransactions = transactions.slice(0, 5);
 
-  // Group transactions by date for diary view
-  const groupedTransactions = transactions.reduce((groups, transaction) => {
-    const date = transaction.date.split('T')[0];
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(transaction);
-    return groups;
-  }, {} as Record<string, typeof transactions>);
-
-  const recentDates = Object.keys(groupedTransactions)
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
-    .slice(0, 7);
-
-  // This week's summary
-  const weekStart = startOfWeek(new Date());
-  const weekEnd = endOfWeek(new Date());
-  const thisWeekTransactions = transactions.filter(t => {
-    const transDate = new Date(t.date);
-    return transDate >= weekStart && transDate <= weekEnd;
-  });
-
-  const weekIncome = thisWeekTransactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-  
-  const weekExpenses = thisWeekTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const formatCurrency = (amount: number) => {
-    if (!showBalance) return '••••••';
-    return `₹${amount.toLocaleString('en-IN')}`;
-  };
-
-  const getDateLabel = (dateStr: string) => {
-    const date = new Date(dateStr);
-    if (isToday(date)) return 'Today';
-    if (isYesterday(date)) return 'Yesterday';
-    return format(date, 'EEEE, MMM dd');
-  };
+  // Quick stats
+  const totalAccounts = accounts.length;
+  const recentTransactionsCount = transactions.filter(t => {
+    const transactionDate = new Date(t.date);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return transactionDate >= weekAgo;
+  }).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 space-y-6">
-      {/* Header - Diary Style */}
-      <div className="text-center space-y-2">
-        <div className="flex items-center justify-center gap-3">
-          <BookOpen className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            My Money Diary
-          </h1>
-        </div>
-        <p className="text-gray-600">
-          {format(new Date(), 'EEEE, MMMM dd, yyyy')}
+    <div className="space-y-6 md:space-y-8">
+      {/* Header */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Your complete financial overview and quick actions
         </p>
       </div>
-
-      {/* Financial Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-white/20 rounded-full">
-                  <Wallet className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-blue-100 text-sm font-medium">Current Balance</p>
-                  <p className="text-2xl font-bold">{formatCurrency(balance)}</p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowBalance(!showBalance)}
-                className="text-white/80 hover:text-white hover:bg-white/10"
+      
+      {/* Enhanced Financial Summary */}
+      <EnhancedSummaryCards />
+      
+      {/* Quick Actions & Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        
+        {/* Quick Actions */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-medium flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => navigate('/accounts')}
               >
-                {showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                <CreditCard className="mr-2 h-4 w-4" />
+                Manage Accounts
+                <ArrowRight className="ml-auto h-4 w-4" />
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-white/20 rounded-full">
-                <TrendingUp className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-green-100 text-sm font-medium">This Week Income</p>
-                <p className="text-2xl font-bold">{formatCurrency(weekIncome)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-white/20 rounded-full">
-                <TrendingDown className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-red-100 text-sm font-medium">This Week Expenses</p>
-                <p className="text-2xl font-bold">{formatCurrency(weekExpenses)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 border-0 bg-gradient-to-br from-blue-50 to-blue-100">
-          <CardContent className="p-4 text-center" onClick={() => setShowForm(true)}>
-            <PlusCircle className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-            <p className="font-medium text-blue-900">Add Entry</p>
-            <p className="text-xs text-blue-600">Record transaction</p>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 border-0 bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardContent className="p-4 text-center">
-            <PieChart className="h-8 w-8 mx-auto mb-2 text-purple-600" />
-            <p className="font-medium text-purple-900">Analytics</p>
-            <p className="text-xs text-purple-600">View insights</p>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 border-0 bg-gradient-to-br from-green-50 to-green-100">
-          <CardContent className="p-4 text-center">
-            <Target className="h-8 w-8 mx-auto mb-2 text-green-600" />
-            <p className="font-medium text-green-900">Goals</p>
-            <p className="text-xs text-green-600">Track progress</p>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 border-0 bg-gradient-to-br from-orange-50 to-orange-100">
-          <CardContent className="p-4 text-center">
-            <FileText className="h-8 w-8 mx-auto mb-2 text-orange-600" />
-            <p className="font-medium text-orange-900">Export</p>
-            <p className="text-xs text-orange-600">Download data</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Diary Entries */}
-      <Card className="border-0 shadow-lg bg-white">
-        <CardHeader className="border-b border-gray-100">
-          <CardTitle className="flex items-center gap-2 text-xl text-gray-800">
-            <Clock className="h-5 w-5 text-blue-600" />
-            Recent Diary Entries
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {recentDates.length === 0 ? (
-            <div className="text-center py-12">
-              <BookOpen className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">Your Money Diary is Empty</h3>
-              <p className="text-gray-500 mb-4">Start by recording your first financial transaction</p>
-              <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Write First Entry
+              
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => navigate('/transactions')}
+              >
+                <TrendingUp className="mr-2 h-4 w-4" />
+                View All Transactions
+                <ArrowRight className="ml-auto h-4 w-4" />
               </Button>
-            </div>
-          ) : (
-            <div className="max-h-96 overflow-y-auto">
-              {recentDates.map((date) => (
-                <div key={date} className="border-b border-gray-100 last:border-b-0">
-                  <div className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <h3 className="font-semibold text-gray-800">{getDateLabel(date)}</h3>
-                      <div className="ml-auto text-sm text-gray-500">
-                        {groupedTransactions[date].length} entries
+              
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => navigate('/analytics')}
+              >
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Analytics & Reports
+                <ArrowRight className="ml-auto h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Quick Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-medium">Quick Stats</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Total Accounts</span>
+                <span className="font-semibold">{totalAccounts}</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Total Transactions</span>
+                <span className="font-semibold">{transactions.length}</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">This Week</span>
+                <span className="font-semibold">{recentTransactionsCount} transactions</span>
+              </div>
+              
+              <div className="pt-2 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Active Accounts</span>
+                  <span className="font-semibold">
+                    {accounts.filter(acc => acc.is_active).length}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Add Transaction Form */}
+          <EnhancedTransactionForm isDialog={false} />
+        </div>
+        
+        {/* Main Content Area */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* Recent Transactions */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">Recent Transactions</CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate('/transactions')}
+              >
+                View All
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {recentTransactions.length > 0 ? (
+                <div className="space-y-3">
+                  {recentTransactions.map((transaction) => (
+                    <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          transaction.type === 'income' 
+                            ? 'bg-green-100 text-green-600' 
+                            : transaction.type === 'expense'
+                            ? 'bg-red-100 text-red-600'
+                            : 'bg-blue-100 text-blue-600'
+                        }`}>
+                          {transaction.type === 'income' ? '+' : transaction.type === 'expense' ? '-' : '→'}
+                        </div>
+                        <div>
+                          <p className="font-medium">{transaction.description}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {transaction.category || 'Transfer'}
+                            {transaction.type === 'transfer' && (
+                              <span className="ml-2">
+                                {transaction.from_account?.name} → {transaction.to_account?.name}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-semibold ${
+                          transaction.type === 'income' 
+                            ? 'text-green-600' 
+                            : transaction.type === 'expense'
+                            ? 'text-red-600'
+                            : 'text-blue-600'
+                        }`}>
+                          {transaction.type === 'income' ? '+' : transaction.type === 'expense' ? '-' : ''}
+                          ₹{transaction.amount.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </p>
                       </div>
                     </div>
-                    
-                    <div className="space-y-3">
-                      {groupedTransactions[date].map((transaction) => (
-                        <div
-                          key={transaction.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={cn(
-                                "w-10 h-10 rounded-full flex items-center justify-center",
-                                transaction.type === 'income'
-                                  ? 'bg-green-100 text-green-600'
-                                  : 'bg-red-100 text-red-600'
-                              )}
-                            >
-                              {transaction.type === 'income' ? (
-                                <TrendingUp className="h-5 w-5" />
-                              ) : (
-                                <TrendingDown className="h-5 w-5" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{transaction.description}</p>
-                              <Badge
-                                variant="secondary"
-                                className={cn(
-                                  "text-xs",
-                                  transaction.type === 'income'
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-red-100 text-red-700'
-                                )}
-                              >
-                                {transaction.category}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p
-                              className={cn(
-                                "font-bold text-lg",
-                                transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                              )}
-                            >
-                              {transaction.type === 'income' ? '+' : '-'}₹
-                              {transaction.amount.toLocaleString('en-IN')}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {format(new Date(transaction.date), 'h:mm a')}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No transactions yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Add your first transaction to get started!
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Transaction Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">New Diary Entry</h2>
-              <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>
-                ×
-              </Button>
-            </div>
-            <div className="p-4">
-              <TransactionForm isDialog={true} onClose={() => setShowForm(false)} />
-            </div>
-          </div>
+          {/* Spending Chart */}
+          <SpendingChart />
         </div>
-      )}
+      </div>
     </div>
   );
 };
 
-export default Dashboard;
+export default EnhancedDashboard;
