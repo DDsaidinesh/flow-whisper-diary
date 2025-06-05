@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 // Define the transaction types
-export type TransactionType = 'income' | 'expense' | 'transfer';
+export type TransactionType = 'income' | 'expense';
 
 // Define category structure to match database
 export interface Category {
@@ -19,35 +19,18 @@ export interface Category {
   updated_at?: string;
 }
 
-// Define the enhanced transaction interface
+// Define the transaction interface to match database
 export interface Transaction {
   id: string;
   user_id: string;
   amount: number;
   description: string;
-  category_id: string | null;
+  category_id: string;
   category?: string; // For compatibility with existing code
   type: TransactionType;
   date: string;
-  from_account_id: string | null;
-  to_account_id: string | null;
   created_at: string;
   updated_at: string;
-  // Joined account data
-  from_account?: {
-    id: string;
-    name: string;
-    account_type?: {
-      name: string;
-    };
-  };
-  to_account?: {
-    id: string;
-    name: string;
-    account_type?: {
-      name: string;
-    };
-  };
 }
 
 // Define the migration result interface
@@ -63,8 +46,7 @@ interface MigrationResult {
 // Define categories for each transaction type
 export const CATEGORIES: Record<TransactionType, string[]> = {
   income: ['Salary', 'Freelance', 'Investments', 'Gifts', 'Other'],
-  expense: ['Food', 'Housing', 'Transportation', 'Entertainment', 'Utilities', 'Healthcare', 'Shopping', 'Education', 'Personal', 'Other'],
-  transfer: [] // Transfers don't need categories
+  expense: ['Food', 'Housing', 'Transportation', 'Entertainment', 'Utilities', 'Healthcare', 'Shopping', 'Education', 'Personal', 'Other']
 };
 
 // Define the default categories
@@ -103,7 +85,6 @@ interface MoneyFlowContextType {
   getCategoryTotals: () => Record<string, number>;
   migrateLocalData: () => Promise<void>;
   isLoading: boolean;
-  refreshTransactions: () => Promise<void>;
 }
 
 // Create the context
@@ -144,9 +125,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
         const { data, error } = await supabase
           .from('categories')
           .select('*')
-          .or(`is_default.eq.true,user_id.eq.${user.id}`)
-          .order('type')
-          .order('name');
+          .or(`is_default.eq.true,user_id.eq.${user.id}`);
         
         if (error) {
           throw error;
@@ -176,119 +155,93 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
   }, [isAuthenticated, user, toast]);
 
   // Load transactions from Supabase
-  const loadTransactions = async () => {
-    setIsLoading(true);
-    
-    if (!isAuthenticated || !user) {
-      setTransactions([]);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // Fetch transactions with account information
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          categories (name),
-          from_account:accounts!transactions_from_account_id_fkey (
-            id,
-            name,
-            account_types (name)
-          ),
-          to_account:accounts!transactions_to_account_id_fkey (
-            id,
-            name,
-            account_types (name)
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false });
-      
-      if (transactionsError) {
-        throw transactionsError;
-      }
-      
-      if (transactionsData) {
-        // Process the fetched data to match our expected structure
-        const processedTransactions = transactionsData.map(transaction => ({
-          ...transaction,
-          category: transaction.categories?.name || (transaction.type === 'transfer' ? 'Transfer' : ''),
-          from_account: transaction.from_account ? {
-            ...transaction.from_account,
-            account_type: transaction.from_account.account_types
-          } : undefined,
-          to_account: transaction.to_account ? {
-            ...transaction.to_account,
-            account_type: transaction.to_account.account_types
-          } : undefined,
-        })) as Transaction[];
-        
-        setTransactions(processedTransactions);
-      }
-    } catch (error: any) {
-      console.error('Error loading transactions:', error.message);
-      
-      // Fallback to local storage if Supabase fails
-      const key = `moneyFlowTransactions_${user.id}`;
-      const savedTransactions = localStorage.getItem(key);
-      
-      if (savedTransactions) {
-        setTransactions(JSON.parse(savedTransactions));
-        toast({
-          title: 'Offline mode',
-          description: 'Using locally stored transactions due to connection issue',
-          variant: 'destructive',
-        });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const loadTransactions = async () => {
+      setIsLoading(true);
+      
+      if (!isAuthenticated || !user) {
+        setTransactions([]);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch transactions from Supabase
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('transactions')
+          .select(`
+            *,
+            categories (name)
+          `)
+          .eq('user_id', user.id)
+          .order('date', { ascending: false });
+        
+        if (transactionsError) {
+          throw transactionsError;
+        }
+        
+        if (transactionsData) {
+          // Process the fetched data to match our expected structure
+          const processedTransactions = transactionsData.map(transaction => ({
+            ...transaction,
+            category: transaction.categories?.name || '',
+          })) as Transaction[];
+          
+          setTransactions(processedTransactions);
+        }
+      } catch (error: any) {
+        console.error('Error loading transactions:', error.message);
+        
+        // Fallback to local storage if Supabase fails
+        const key = `moneyFlowTransactions_${user.id}`;
+        const savedTransactions = localStorage.getItem(key);
+        
+        if (savedTransactions) {
+          setTransactions(JSON.parse(savedTransactions));
+          toast({
+            title: 'Offline mode',
+            description: 'Using locally stored transactions due to connection issue',
+            variant: 'destructive',
+          });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
     loadTransactions();
   }, [isAuthenticated, user, toast]);
-
-  // Refresh transactions
-  const refreshTransactions = async () => {
-    await loadTransactions();
-  };
 
   // Add a new transaction
   const addTransaction = async (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!isAuthenticated || !user) return;
 
     try {
-      // For transfers, we don't need a category
-      let categoryId = transaction.category_id;
+      // Find the category_id based on the category name
+      let categoryId = '';
       
-      if (transaction.type !== 'transfer' && transaction.category && !categoryId) {
-        // Find a matching category
-        const matchingCategory = categories.find(cat => 
-          cat.name === transaction.category && cat.type === transaction.type
-        );
-        
-        if (matchingCategory) {
-          categoryId = matchingCategory.id;
-        } else {
-          // Create a new category if needed
-          const { data, error } = await supabase
-            .from('categories')
-            .insert({
-              name: transaction.category,
-              type: transaction.type,
-              user_id: user.id,
-              is_default: false
-            })
-            .select('id')
-            .single();
-            
-          if (error) throw error;
-          categoryId = data.id;
-        }
+      // Find a matching category
+      const matchingCategory = categories.find(cat => 
+        cat.name === transaction.category && cat.type === transaction.type
+      );
+      
+      if (matchingCategory) {
+        categoryId = matchingCategory.id;
+      } else {
+        // Create a new category if needed
+        const { data, error } = await supabase
+          .from('categories')
+          .insert({
+            name: transaction.category,
+            type: transaction.type,
+            user_id: user.id,
+            is_default: false
+          })
+          .select('id')
+          .single();
+          
+        if (error) throw error;
+        categoryId = data.id;
       }
       
       // Insert the transaction
@@ -300,23 +253,11 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
           description: transaction.description,
           category_id: categoryId,
           type: transaction.type,
-          date: transaction.date,
-          from_account_id: transaction.from_account_id,
-          to_account_id: transaction.to_account_id,
+          date: transaction.date
         })
         .select(`
           *,
-          categories (name),
-          from_account:accounts!transactions_from_account_id_fkey (
-            id,
-            name,
-            account_types (name)
-          ),
-          to_account:accounts!transactions_to_account_id_fkey (
-            id,
-            name,
-            account_types (name)
-          )
+          categories (name)
         `)
         .single();
         
@@ -325,15 +266,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       // Update the local state
       const newTransaction = {
         ...data,
-        category: data.categories?.name || (data.type === 'transfer' ? 'Transfer' : ''),
-        from_account: data.from_account ? {
-          ...data.from_account,
-          account_type: data.from_account.account_types
-        } : undefined,
-        to_account: data.to_account ? {
-          ...data.to_account,
-          account_type: data.to_account.account_types
-        } : undefined,
+        category: data.categories?.name || ''
       } as Transaction;
       
       setTransactions(prev => [newTransaction, ...prev]);
@@ -443,20 +376,22 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
     }
   };
 
-  // Get total balance - this is now handled by accounts, but kept for compatibility
+  // FIXED: Get total balance (income - expenses)
   const getBalance = () => {
     if (!isAuthenticated || !user) return 0;
     
-    return transactions
-      .reduce((total, transaction) => {
-        if (transaction.type === 'transfer') return total; // Transfers don't affect overall balance
-        return transaction.type === 'income'
-          ? total + transaction.amount
-          : total - transaction.amount;
-      }, 0);
+    const totalIncome = transactions
+      .filter(transaction => transaction.type === 'income')
+      .reduce((total, transaction) => total + transaction.amount, 0);
+    
+    const totalExpenses = transactions
+      .filter(transaction => transaction.type === 'expense')
+      .reduce((total, transaction) => total + transaction.amount, 0);
+    
+    return totalIncome - totalExpenses;
   };
 
-  // Get total income
+  // FIXED: Get total income
   const getIncome = () => {
     if (!isAuthenticated || !user) return 0;
     
@@ -465,7 +400,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
-  // Get total expenses
+  // FIXED: Get total expenses
   const getExpenses = () => {
     if (!isAuthenticated || !user) return 0;
     
@@ -474,7 +409,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
-  // Get category totals for expense categories
+  // Get category totals for expense categories - filtered by current user
   const getCategoryTotals = () => {
     if (!isAuthenticated || !user) return {};
     
@@ -516,15 +451,37 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
         
       if (error) throw error;
       
+      // Parse the result properly as MigrationResult
+      // First cast to unknown, then to MigrationResult to ensure type safety
       const migrationResult = (data as unknown) as MigrationResult;
       
+      // Show success message
       toast({
         title: 'Data migration successful',
         description: `Migrated ${migrationResult.migrated_count} transactions to the database`,
       });
       
       // Reload transactions
-      await refreshTransactions();
+      const { data: newTransactions, error: fetchError } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          categories (name)
+        `)
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+        
+      if (fetchError) throw fetchError;
+      
+      if (newTransactions) {
+        // Process the fetched data to match our expected structure
+        const processedTransactions = newTransactions.map(transaction => ({
+          ...transaction,
+          category: transaction.categories?.name || '',
+        })) as Transaction[];
+        
+        setTransactions(processedTransactions);
+      }
     } catch (error: any) {
       console.error('Error migrating data:', error.message);
       toast({
@@ -550,7 +507,6 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
         getCategoryTotals,
         migrateLocalData,
         isLoading,
-        refreshTransactions,
       }}
     >
       {children}
