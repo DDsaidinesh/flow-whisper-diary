@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 // Define the transaction types
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense' | 'transfer';
 
 // Define category structure to match database
 export interface Category {
@@ -19,6 +19,25 @@ export interface Category {
   updated_at?: string;
 }
 
+// Define account structure to match database
+export interface Account {
+  id: string;
+  user_id: string;
+  account_type_id: string;
+  name: string;
+  balance: number;
+  initial_balance: number;
+  currency: string;
+  description?: string;
+  is_active: boolean;
+  is_default: boolean;
+  color?: string;
+  icon?: string;
+  account_number?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Define the transaction interface to match database
 export interface Transaction {
   id: string;
@@ -29,6 +48,8 @@ export interface Transaction {
   category?: string; // For compatibility with existing code
   type: TransactionType;
   date: string;
+  from_account_id?: string;
+  to_account_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -46,7 +67,8 @@ interface MigrationResult {
 // Define categories for each transaction type
 export const CATEGORIES: Record<TransactionType, string[]> = {
   income: ['Salary', 'Freelance', 'Investments', 'Gifts', 'Other'],
-  expense: ['Food', 'Housing', 'Transportation', 'Entertainment', 'Utilities', 'Healthcare', 'Shopping', 'Education', 'Personal', 'Other']
+  expense: ['Food', 'Housing', 'Transportation', 'Entertainment', 'Utilities', 'Healthcare', 'Shopping', 'Education', 'Personal', 'Other'],
+  transfer: ['Account Transfer'] // Transfers don't really need multiple categories
 };
 
 // Define the default categories
@@ -71,11 +93,14 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'exp_other', name: 'Other', type: 'expense', is_default: true, color: '#607d8b' },
 ];
 
-// Define the context interface
+  // Define the context interface
 interface MoneyFlowContextType {
   transactions: Transaction[];
   categories: Category[];
+  accounts: Account[];
+  defaultAccount: Account | null;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  addTransfer: (fromAccountId: string, toAccountId: string, amount: number, description: string, date: string) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   clearAllTransactions: () => Promise<void>;
   addCategory: (category: Omit<Category, 'id' | 'user_id' | 'is_default'>) => Promise<void>;
@@ -108,9 +133,51 @@ interface MoneyFlowProviderProps {
 export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [defaultAccount, setDefaultAccount] = useState<Account | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
+
+  // Load accounts from Supabase
+  useEffect(() => {
+    const loadAccounts = async () => {
+      if (!isAuthenticated || !user) {
+        setAccounts([]);
+        setDefaultAccount(null);
+        return;
+      }
+
+      try {
+        // Fetch accounts from Supabase
+        const { data, error } = await supabase
+          .from('accounts')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true);
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setAccounts(data as Account[]);
+          // Find the default account
+          const defaultAcc = data.find(acc => acc.is_default) || data[0] || null;
+          setDefaultAccount(defaultAcc as Account);
+        }
+      } catch (error: any) {
+        console.error('Error loading accounts:', error.message);
+        toast({
+          title: 'Error loading accounts',
+          description: 'Could not load your accounts. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    };
+    
+    loadAccounts();
+  }, [isAuthenticated, user, toast]);
 
   // Load categories from Supabase
   useEffect(() => {
@@ -125,7 +192,10 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
         const { data, error } = await supabase
           .from('categories')
           .select('*')
-          .or(`is_default.eq.true,user_id.eq.${user.id}`);
+          .or(`is_default.eq.true,user_id.eq.${user.id}`)
+          .order('is_default', { ascending: false })
+          .order('type')
+          .order('name');
         
         if (error) {
           throw error;
@@ -166,7 +236,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       }
 
       try {
-        // Fetch transactions from Supabase
+        // Fetch transactions from Supabase with categories
         const { data: transactionsData, error: transactionsError } = await supabase
           .from('transactions')
           .select(`
@@ -212,36 +282,120 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
     loadTransactions();
   }, [isAuthenticated, user, toast]);
 
-  // Add a new transaction
-  const addTransaction = async (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  // Add a new transfer transaction
+  const addTransfer = async (fromAccountId: string, toAccountId: string, amount: number, description: string, date: string) => {
     if (!isAuthenticated || !user) return;
 
     try {
-      // Find the category_id based on the category name
+      // Find or create a transfer category
       let categoryId = '';
-      
-      // Find a matching category
-      const matchingCategory = categories.find(cat => 
-        cat.name === transaction.category && cat.type === transaction.type
+      const transferCategory = categories.find(cat => 
+        cat.name === 'Account Transfer' && cat.type === 'transfer'
       );
       
-      if (matchingCategory) {
-        categoryId = matchingCategory.id;
+      if (transferCategory) {
+        categoryId = transferCategory.id;
       } else {
-        // Create a new category if needed
+        // Create transfer category
         const { data, error } = await supabase
           .from('categories')
           .insert({
-            name: transaction.category,
-            type: transaction.type,
+            name: 'Account Transfer',
+            type: 'transfer',
             user_id: user.id,
-            is_default: false
+            is_default: false,
+            color: '#9C27B0'
           })
           .select('id')
           .single();
           
         if (error) throw error;
         categoryId = data.id;
+      }
+      
+      // Insert the transfer transaction
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          amount: amount,
+          description: description,
+          category_id: categoryId,
+          type: 'transfer',
+          date: date,
+          from_account_id: fromAccountId,
+          to_account_id: toAccountId
+        })
+        .select(`
+          *,
+          categories (name)
+        `)
+        .single();
+        
+      if (error) throw error;
+      
+      // Update the local state
+      const newTransaction = {
+        ...data,
+        category: data.categories?.name || 'Account Transfer'
+      } as Transaction;
+      
+      setTransactions(prev => [newTransaction, ...prev]);
+
+      // Reload accounts to get updated balances (triggers will handle the balance update)
+      await reloadAccounts();
+      
+      toast({
+        title: 'Transfer completed',
+        description: `₹${amount.toLocaleString('en-IN')} transferred successfully`,
+      });
+    } catch (error: any) {
+      console.error('Error adding transfer:', error.message);
+      toast({
+        title: 'Error creating transfer',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+  const addTransaction = async (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    if (!isAuthenticated || !user) return;
+
+    try {
+      // Find the category_id based on the category name
+      let categoryId = transaction.category_id || '';
+      
+      if (!categoryId && transaction.category) {
+        // Find a matching category
+        const matchingCategory = categories.find(cat => 
+          cat.name === transaction.category && cat.type === transaction.type
+        );
+        
+        if (matchingCategory) {
+          categoryId = matchingCategory.id;
+        } else {
+          // Create a new category if needed
+          const { data, error } = await supabase
+            .from('categories')
+            .insert({
+              name: transaction.category,
+              type: transaction.type,
+              user_id: user.id,
+              is_default: false
+            })
+            .select('id')
+            .single();
+            
+          if (error) throw error;
+          categoryId = data.id;
+        }
+      }
+
+      // Use the default account if no specific account is provided
+      const fromAccountId = transaction.from_account_id || defaultAccount?.id;
+      
+      if (!fromAccountId) {
+        throw new Error('No default account found. Please create an account first.');
       }
       
       // Insert the transaction
@@ -253,7 +407,9 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
           description: transaction.description,
           category_id: categoryId,
           type: transaction.type,
-          date: transaction.date
+          date: transaction.date,
+          from_account_id: fromAccountId,
+          to_account_id: transaction.to_account_id
         })
         .select(`
           *,
@@ -270,6 +426,14 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       } as Transaction;
       
       setTransactions(prev => [newTransaction, ...prev]);
+
+      // Reload accounts to get updated balances (triggers will handle the balance update)
+      await reloadAccounts();
+      
+      toast({
+        title: 'Transaction added',
+        description: `${transaction.type === 'income' ? 'Income' : 'Expense'} of ₹${transaction.amount} recorded successfully`,
+      });
     } catch (error: any) {
       console.error('Error adding transaction:', error.message);
       toast({
@@ -280,11 +444,35 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
     }
   };
 
+  // Reload accounts to get updated balances
+  const reloadAccounts = async () => {
+    if (!user) return;
+    
+    try {
+      const { data } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+        
+      if (data) {
+        setAccounts(data as Account[]);
+        const defaultAcc = data.find(acc => acc.is_default) || data[0] || null;
+        setDefaultAccount(defaultAcc as Account);
+      }
+    } catch (error: any) {
+      console.error('Error reloading accounts:', error.message);
+    }
+  };
+
   // Delete a transaction
   const deleteTransaction = async (id: string) => {
     if (!isAuthenticated || !user) return;
 
     try {
+      // Get the transaction details before deletion for balance update
+      const transactionToDelete = transactions.find(t => t.id === id);
+      
       const { error } = await supabase
         .from('transactions')
         .delete()
@@ -295,6 +483,11 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       
       // Update local state
       setTransactions(prev => prev.filter(transaction => transaction.id !== id));
+      
+      // Reload accounts to get updated balances (triggers will handle the balance update)
+      if (transactionToDelete?.from_account_id || transactionToDelete?.to_account_id) {
+        await reloadAccounts();
+      }
       
       toast({
         title: 'Transaction deleted',
@@ -324,6 +517,9 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       
       // Update local state
       setTransactions([]);
+      
+      // Reload accounts to get updated balances (triggers will handle balance updates)
+      await reloadAccounts();
       
       toast({
         title: 'All transactions cleared',
@@ -376,22 +572,14 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
     }
   };
 
-  // FIXED: Get total balance (income - expenses)
+  // Get total balance from accounts (not just transaction calculations)
   const getBalance = () => {
-    if (!isAuthenticated || !user) return 0;
+    if (!isAuthenticated || !user || !defaultAccount) return 0;
     
-    const totalIncome = transactions
-      .filter(transaction => transaction.type === 'income')
-      .reduce((total, transaction) => total + transaction.amount, 0);
-    
-    const totalExpenses = transactions
-      .filter(transaction => transaction.type === 'expense')
-      .reduce((total, transaction) => total + transaction.amount, 0);
-    
-    return totalIncome - totalExpenses;
+    return defaultAccount.balance || 0;
   };
 
-  // FIXED: Get total income
+  // Get total income - filtered by current user
   const getIncome = () => {
     if (!isAuthenticated || !user) return 0;
     
@@ -400,7 +588,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
-  // FIXED: Get total expenses
+  // Get total expenses - filtered by current user
   const getExpenses = () => {
     if (!isAuthenticated || !user) return 0;
     
@@ -452,7 +640,6 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       if (error) throw error;
       
       // Parse the result properly as MigrationResult
-      // First cast to unknown, then to MigrationResult to ensure type safety
       const migrationResult = (data as unknown) as MigrationResult;
       
       // Show success message
@@ -461,7 +648,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
         description: `Migrated ${migrationResult.migrated_count} transactions to the database`,
       });
       
-      // Reload transactions
+      // Reload transactions and update account balances
       const { data: newTransactions, error: fetchError } = await supabase
         .from('transactions')
         .select(`
@@ -482,6 +669,9 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
         
         setTransactions(processedTransactions);
       }
+
+      // Reload accounts to get updated balances
+      await reloadAccounts();
     } catch (error: any) {
       console.error('Error migrating data:', error.message);
       toast({
@@ -497,7 +687,10 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       value={{
         transactions,
         categories,
+        accounts,
+        defaultAccount,
         addTransaction,
+        addTransfer,
         deleteTransaction,
         clearAllTransactions,
         addCategory,

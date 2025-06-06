@@ -11,100 +11,100 @@ export type Database = {
     Tables: {
       account_types: {
         Row: {
-          id: string
-          user_id: string | null
-          name: string
+          affects_net_worth: boolean | null
           category: string
+          color: string | null
+          created_at: string | null
           description: string | null
           icon: string | null
-          color: string | null
-          is_default: boolean
-          is_system: boolean
-          affects_net_worth: boolean
-          created_at: string
-          updated_at: string
+          id: string
+          is_default: boolean | null
+          is_system: boolean | null
+          name: string
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
-          id?: string
-          user_id?: string | null
-          name: string
+          affects_net_worth?: boolean | null
           category: string
+          color?: string | null
+          created_at?: string | null
           description?: string | null
           icon?: string | null
-          color?: string | null
-          is_default?: boolean
-          is_system?: boolean
-          affects_net_worth?: boolean
-          created_at?: string
-          updated_at?: string
+          id?: string
+          is_default?: boolean | null
+          is_system?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
-          id?: string
-          user_id?: string | null
-          name?: string
+          affects_net_worth?: boolean | null
           category?: string
+          color?: string | null
+          created_at?: string | null
           description?: string | null
           icon?: string | null
-          color?: string | null
-          is_default?: boolean
-          is_system?: boolean
-          affects_net_worth?: boolean
-          created_at?: string
-          updated_at?: string
+          id?: string
+          is_default?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
       accounts: {
         Row: {
-          id: string
-          user_id: string
-          account_type_id: string
-          name: string
-          balance: number
-          initial_balance: number
-          currency: string
-          description: string | null
-          is_active: boolean
-          is_default: boolean
-          color: string | null
-          icon: string | null
           account_number: string | null
-          created_at: string
-          updated_at: string
+          account_type_id: string
+          balance: number | null
+          color: string | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          initial_balance: number | null
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          account_type_id: string
-          name: string
-          balance?: number
-          initial_balance?: number
-          currency?: string
-          description?: string | null
-          is_active?: boolean
-          is_default?: boolean
-          color?: string | null
-          icon?: string | null
           account_number?: string | null
-          created_at?: string
-          updated_at?: string
+          account_type_id: string
+          balance?: number | null
+          color?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          initial_balance?: number | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          account_type_id?: string
-          name?: string
-          balance?: number
-          initial_balance?: number
-          currency?: string
-          description?: string | null
-          is_active?: boolean
-          is_default?: boolean
-          color?: string | null
-          icon?: string | null
           account_number?: string | null
-          created_at?: string
-          updated_at?: string
+          account_type_id?: string
+          balance?: number | null
+          color?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          initial_balance?: number | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -112,51 +112,6 @@ export type Database = {
             columns: ["account_type_id"]
             isOneToOne: false
             referencedRelation: "account_types"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "accounts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      budget_goals: {
-        Row: {
-          amount: number
-          category_id: string
-          created_at: string
-          id: string
-          period: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          category_id: string
-          created_at?: string
-          id?: string
-          period?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          category_id?: string
-          created_at?: string
-          id?: string
-          period?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "budget_goals_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
             referencedColumns: ["id"]
           },
         ]
@@ -221,6 +176,60 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_tag_assignments: {
+        Row: {
+          tag_id: string
+          transaction_id: string
+        }
+        Insert: {
+          tag_id: string
+          transaction_id: string
+        }
+        Update: {
+          tag_id?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_tag_assignments_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_tag_assignments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_tags: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -228,12 +237,12 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
+          from_account_id: string | null
           id: string
+          to_account_id: string | null
           type: string
           updated_at: string
           user_id: string
-          from_account_id: string | null
-          to_account_id: string | null
         }
         Insert: {
           amount: number
@@ -241,12 +250,12 @@ export type Database = {
           created_at?: string
           date: string
           description?: string | null
+          from_account_id?: string | null
           id?: string
+          to_account_id?: string | null
           type: string
           updated_at?: string
           user_id: string
-          from_account_id?: string | null
-          to_account_id?: string | null
         }
         Update: {
           amount?: number
@@ -254,12 +263,12 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string | null
+          from_account_id?: string | null
           id?: string
+          to_account_id?: string | null
           type?: string
           updated_at?: string
           user_id?: string
-          from_account_id?: string | null
-          to_account_id?: string | null
         }
         Relationships: [
           {
@@ -283,103 +292,7 @@ export type Database = {
             referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "transactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
         ]
-      }
-      transaction_tags: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          color: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          name: string
-          color?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          color?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "transaction_tags_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      transaction_tag_assignments: {
-        Row: {
-          transaction_id: string
-          tag_id: string
-        }
-        Insert: {
-          transaction_id: string
-          tag_id: string
-        }
-        Update: {
-          transaction_id?: string
-          tag_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "transaction_tag_assignments_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "transaction_tag_assignments_tag_id_fkey"
-            columns: ["tag_id"]
-            isOneToOne: false
-            referencedRelation: "transaction_tags"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      user_settings: {
-        Row: {
-          created_at: string
-          currency: string
-          notification_preferences: Json
-          theme_preference: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          currency?: string
-          notification_preferences?: Json
-          theme_preference?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          currency?: string
-          notification_preferences?: Json
-          theme_preference?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
       }
     }
     Views: {
@@ -392,6 +305,14 @@ export type Database = {
       }
       create_default_accounts: {
         Args: { user_uuid: string }
+        Returns: undefined
+      }
+      create_default_accounts_for_existing_users: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      ensure_default_categories: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       migrate_local_storage_data: {
