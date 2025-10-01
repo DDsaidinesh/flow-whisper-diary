@@ -37,11 +37,11 @@ const SpendingChart: React.FC = () => {
       const data = payload[0].payload;
       return (
         <div className="bg-white p-3 border rounded-lg shadow-lg">
-          <p className="font-medium text-gray-900">{data.name}</p>
-          <p className="text-sm text-gray-600">
-            Amount: <span className="font-medium text-flow-red">{formatCurrency(data.value)}</span>
+          <p className="font-medium text-foreground">{data.name}</p>
+          <p className="text-sm text-muted-foreground">
+            Amount: <span className="font-medium text-flow-expense">{formatCurrency(data.value)}</span>
           </p>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Percentage: <span className="font-medium">{data.percentage.toFixed(1)}%</span>
           </p>
         </div>
@@ -98,11 +98,11 @@ const SpendingChart: React.FC = () => {
   }
   
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-lg font-medium flex items-center justify-between">
+    <Card className="w-full border-primary/20">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-semibold flex items-center justify-between">
           <span>Spending Breakdown</span>
-          <span className="text-sm font-normal text-gray-500">
+          <span className="text-sm font-normal text-muted-foreground">
             Total: {formatCurrency(totalExpenses)}
           </span>
         </CardTitle>

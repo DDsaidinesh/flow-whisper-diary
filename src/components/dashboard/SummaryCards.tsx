@@ -15,70 +15,70 @@ const SummaryCards: React.FC = () => {
   const totalAccountsBalance = accounts.reduce((total, account) => total + (account.balance || 0), 0);
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card className="bg-white border-flow-blue-light">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <div className="p-2 rounded-full bg-flow-blue-light">
-              <Wallet className="h-6 w-6 text-flow-blue" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                {defaultAccount ? `${defaultAccount.name} Balance` : 'Account Balance'}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <Card className="border-primary/20 hover:shadow-lg transition-shadow">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-muted-foreground mb-1">
+                {defaultAccount ? `${defaultAccount.name}` : 'Account Balance'}
               </p>
-              <h3 className={`text-2xl font-bold ${accountBalance >= 0 ? 'text-flow-blue' : 'text-flow-red'}`}>
+              <h3 className={`text-2xl font-bold tracking-tight ${accountBalance >= 0 ? 'text-primary' : 'text-destructive'}`}>
                 ₹{accountBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-primary/10">
+              <Wallet className="h-5 w-5 text-primary" />
             </div>
           </div>
         </CardContent>
       </Card>
 
       {accounts.length > 1 && (
-        <Card className="bg-white border-flow-neutral-light">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-2 rounded-full bg-flow-neutral-light">
-                <CreditCard className="h-6 w-6 text-flow-neutral" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">Total Balance</p>
-                <h3 className={`text-2xl font-bold ${totalAccountsBalance >= 0 ? 'text-flow-blue' : 'text-flow-red'}`}>
+        <Card className="border-flow-neutral/20 hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground mb-1">Total Balance</p>
+                <h3 className={`text-2xl font-bold tracking-tight ${totalAccountsBalance >= 0 ? 'text-primary' : 'text-destructive'}`}>
                   ₹{totalAccountsBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </h3>
+              </div>
+              <div className="p-3 rounded-xl bg-flow-neutral-light">
+                <CreditCard className="h-5 w-5 text-flow-neutral" />
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <Card className="bg-white border-flow-green-light">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <div className="p-2 rounded-full bg-flow-green-light">
-              <ArrowUp className="h-6 w-6 text-flow-green" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Income</p>
-              <h3 className="text-2xl font-bold text-flow-green">
+      <Card className="border-flow-income/20 hover:shadow-lg transition-shadow">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-muted-foreground mb-1">Total Income</p>
+              <h3 className="text-2xl font-bold tracking-tight text-flow-income">
                 ₹{income.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-flow-income-light">
+              <ArrowUp className="h-5 w-5 text-flow-income" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-white border-flow-red-light">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <div className="p-2 rounded-full bg-flow-red-light">
-              <ArrowDown className="h-6 w-6 text-flow-red" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Expenses</p>
-              <h3 className="text-2xl font-bold text-flow-red">
+      <Card className="border-flow-expense/20 hover:shadow-lg transition-shadow">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-muted-foreground mb-1">Total Expenses</p>
+              <h3 className="text-2xl font-bold tracking-tight text-flow-expense">
                 ₹{expenses.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-flow-expense-light">
+              <ArrowDown className="h-5 w-5 text-flow-expense" />
             </div>
           </div>
         </CardContent>

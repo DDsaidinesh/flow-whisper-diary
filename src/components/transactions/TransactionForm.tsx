@@ -172,7 +172,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
           type="button"
           variant={activeType === 'expense' ? 'default' : 'outline'}
           className={`flex-1 gap-2 ${
-            activeType === 'expense' ? 'bg-flow-red hover:bg-flow-red-dark' : ''
+            activeType === 'expense' ? 'bg-flow-expense hover:bg-flow-expense-dark text-white' : ''
           }`}
           onClick={() => handleTypeChange('expense')}
         >
@@ -183,7 +183,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
           type="button"
           variant={activeType === 'income' ? 'default' : 'outline'}
           className={`flex-1 gap-2 ${
-            activeType === 'income' ? 'bg-flow-green hover:bg-flow-green-dark' : ''
+            activeType === 'income' ? 'bg-flow-income hover:bg-flow-income-dark text-white' : ''
           }`}
           onClick={() => handleTypeChange('income')}
         >
@@ -194,7 +194,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
           type="button"
           variant={activeType === 'transfer' ? 'default' : 'outline'}
           className={`flex-1 gap-2 ${
-            activeType === 'transfer' ? 'bg-purple-600 hover:bg-purple-700' : ''
+            activeType === 'transfer' ? 'bg-flow-transfer hover:opacity-90 text-white' : ''
           }`}
           onClick={() => handleTypeChange('transfer')}
         >
@@ -346,10 +346,10 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
               type="submit" 
               className={`w-full mt-6 ${
                 activeType === 'expense' 
-                  ? 'bg-flow-red hover:bg-flow-red-dark' 
+                  ? 'bg-flow-expense hover:bg-flow-expense-dark text-white' 
                   : activeType === 'income'
-                  ? 'bg-flow-green hover:bg-flow-green-dark'
-                  : 'bg-purple-600 hover:bg-purple-700'
+                  ? 'bg-flow-income hover:bg-flow-income-dark text-white'
+                  : 'bg-flow-transfer hover:opacity-90 text-white'
               }`}
             >
               Add {activeType.charAt(0).toUpperCase() + activeType.slice(1)}
@@ -394,9 +394,9 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isDialog = false, onC
 
       {/* Desktop Form */}
       <div className="hidden md:block">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-lg font-medium">Add New Transaction</CardTitle>
+        <Card className="w-full border-primary/20">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold">Add Transaction</CardTitle>
           </CardHeader>
           <CardContent>
             <FormContent />

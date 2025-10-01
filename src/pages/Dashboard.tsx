@@ -13,13 +13,16 @@ const Dashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 md:space-y-8">
-        <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-2">Welcome back! Here's your financial overview.</p>
+        </div>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-muted-foreground">Loading your financial data...</span>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center gap-4">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <span className="text-muted-foreground">Loading your financial data...</span>
             </div>
           </CardContent>
         </Card>
@@ -28,24 +31,39 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 md:space-y-8">
-      <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+    <div className="space-y-8 animate-fade-in">
+      {/* Page Header */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground">Welcome back! Here's your financial overview.</p>
+      </div>
       
-      <SummaryCards />
+      {/* Summary Cards Section */}
+      <section>
+        <SummaryCards />
+      </section>
       
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
-        {/* Left Column - Forms and Charts */}
-        <div className="lg:col-span-8 space-y-6 md:space-y-8">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column - Main Content */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Transaction Form & Account Selector */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <TransactionForm />
             {accounts.length > 0 && <AccountSelector />}
-          </div>
-          <SpendingChart />
+          </section>
+          
+          {/* Spending Chart */}
+          <section>
+            <SpendingChart />
+          </section>
         </div>
         
         {/* Right Column - Transaction List */}
-        <div className="lg:col-span-4">
-          <TransactionList />
+        <div className="lg:col-span-1">
+          <section className="lg:sticky lg:top-24">
+            <TransactionList />
+          </section>
         </div>
       </div>
     </div>

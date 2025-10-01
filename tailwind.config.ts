@@ -63,26 +63,24 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Custom colors for our money flow app
-				'flow-blue': {
-					light: '#D3E4FD',
-					DEFAULT: '#33C3F0',
-					dark: '#1EAEDB',
+				// Semantic flow colors using HSL
+				'flow-income': {
+					DEFAULT: 'hsl(var(--flow-income))',
+					light: 'hsl(var(--flow-income-light))',
+					dark: 'hsl(var(--flow-income-dark))',
 				},
-				'flow-green': {
-					light: '#E8F5E9',
-					DEFAULT: '#4CAF50',
-					dark: '#388E3C',
+				'flow-expense': {
+					DEFAULT: 'hsl(var(--flow-expense))',
+					light: 'hsl(var(--flow-expense-light))',
+					dark: 'hsl(var(--flow-expense-dark))',
 				},
-				'flow-red': {
-					light: '#FFEBEE',
-					DEFAULT: '#FF6B6B',
-					dark: '#E53935',
+				'flow-transfer': {
+					DEFAULT: 'hsl(var(--flow-transfer))',
+					light: 'hsl(var(--flow-transfer-light))',
 				},
 				'flow-neutral': {
-					light: '#F5F5F5',
-					DEFAULT: '#9E9E9E',
-					dark: '#616161',
+					DEFAULT: 'hsl(var(--flow-neutral))',
+					light: 'hsl(var(--flow-neutral-light))',
 				},
 			},
 			borderRadius: {

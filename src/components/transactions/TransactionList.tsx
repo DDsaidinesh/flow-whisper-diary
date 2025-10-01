@@ -59,9 +59,9 @@ const TransactionList: React.FC = () => {
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <CardTitle className="text-lg font-medium">Transaction History</CardTitle>
+    <Card className="w-full border-primary/20">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-semibold mb-4">Recent Transactions</CardTitle>
         <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2 sm:gap-4">
           <Input
             placeholder="Search transactions..."
@@ -152,9 +152,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
         <div
           className={cn(
             "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
-            type === 'income' ? 'bg-flow-green-light text-flow-green' : 
-            type === 'transfer' ? 'bg-purple-100 text-purple-600' : 
-            'bg-flow-red-light text-flow-red'
+            type === 'income' ? 'bg-flow-income-light text-flow-income' : 
+            type === 'transfer' ? 'bg-flow-transfer-light text-flow-transfer' : 
+            'bg-flow-expense-light text-flow-expense'
           )}
         >
           {getTransactionIcon()}
@@ -180,9 +180,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
               <Badge 
                 className={cn(
                   "text-xs",
-                  type === 'income' ? 'bg-flow-green-light text-flow-green' : 
-                  type === 'transfer' ? 'bg-purple-100 text-purple-600' :
-                  'bg-flow-red-light text-flow-red'
+                  type === 'income' ? 'bg-flow-income-light text-flow-income border-flow-income/20' : 
+                  type === 'transfer' ? 'bg-flow-transfer-light text-flow-transfer border-flow-transfer/20' :
+                  'bg-flow-expense-light text-flow-expense border-flow-expense/20'
                 )}
               >
                 {category}
@@ -197,9 +197,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
           <span
             className={cn(
               "text-lg font-semibold block",
-              type === 'income' ? 'text-flow-green' : 
-              type === 'transfer' ? 'text-purple-600' :
-              'text-flow-red'
+              type === 'income' ? 'text-flow-income' : 
+              type === 'transfer' ? 'text-flow-transfer' :
+              'text-flow-expense'
             )}
           >
             {type === 'income' ? '+' : type === 'transfer' ? '' : '-'}₹{formatAmount(amount)}
@@ -210,7 +210,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
           variant="ghost"
           size="icon"
           onClick={() => onDelete(id)}
-          className="text-gray-400 hover:text-flow-red hover:bg-flow-red-light shrink-0"
+          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
         >
           <Trash2 className="h-4 w-4" />
           <span className="sr-only">Delete</span>

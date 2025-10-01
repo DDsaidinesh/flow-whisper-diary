@@ -56,9 +56,9 @@ const AccountSelector: React.FC = () => {
   const activeAccounts = accounts.filter(acc => acc.is_active);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-medium flex items-center justify-between">
+    <Card className="border-primary/20">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-semibold flex items-center justify-between">
           <span>Your Accounts</span>
           <Badge variant="outline" className="text-xs">
             {activeAccounts.length} Active
@@ -67,20 +67,20 @@ const AccountSelector: React.FC = () => {
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Quick Stats */}
-        <div className="p-4 bg-gradient-to-r from-flow-blue-light to-flow-green-light rounded-lg">
+        <div className="p-4 bg-gradient-to-r from-primary/10 to-flow-income/10 rounded-lg border border-primary/20">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-sm text-gray-600">Total Balance</p>
+              <p className="text-sm text-muted-foreground">Total Balance</p>
               <p className={cn(
                 "text-2xl font-bold",
-                totalBalance >= 0 ? "text-flow-green" : "text-flow-red"
+                totalBalance >= 0 ? "text-flow-income" : "text-flow-expense"
               )}>
                 ₹{formatBalance(totalBalance)}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-600">Accounts</p>
-              <p className="text-lg font-semibold text-gray-700">{activeAccounts.length}</p>
+              <p className="text-sm text-muted-foreground">Accounts</p>
+              <p className="text-lg font-semibold text-foreground">{activeAccounts.length}</p>
             </div>
           </div>
         </div>
@@ -93,8 +93,8 @@ const AccountSelector: React.FC = () => {
               className={cn(
                 "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all duration-200",
                 account.id === selectedAccount 
-                  ? "border-flow-blue bg-flow-blue-light shadow-md" 
-                  : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                  ? "border-primary bg-primary/5 shadow-md" 
+                  : "border-border hover:border-primary/30 hover:shadow-sm"
               )}
               onClick={() => setSelectedAccount(account.id)}
             >
@@ -103,8 +103,8 @@ const AccountSelector: React.FC = () => {
                   className={cn(
                     "p-2 rounded-full transition-colors",
                     account.id === selectedAccount 
-                      ? "bg-flow-blue text-white" 
-                      : "bg-gray-100 text-gray-600"
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-muted text-muted-foreground"
                   )}
                 >
                   {getAccountIcon(account.name)}
@@ -126,11 +126,11 @@ const AccountSelector: React.FC = () => {
               <div className="text-right shrink-0">
                 <div className={cn(
                   "font-semibold",
-                  (account.balance || 0) >= 0 ? "text-flow-green" : "text-flow-red"
+                  (account.balance || 0) >= 0 ? "text-flow-income" : "text-flow-expense"
                 )}>
                   ₹{formatBalance(account.balance || 0)}
                 </div>
-                <div className="text-xs text-gray-500 uppercase">
+                <div className="text-xs text-muted-foreground uppercase">
                   {account.currency}
                 </div>
               </div>
