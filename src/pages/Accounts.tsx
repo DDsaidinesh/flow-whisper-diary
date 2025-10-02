@@ -39,19 +39,41 @@ interface NewAccountData {
   account_number?: string;
 }
 
+// DB account type shape
+interface DBAccountType {
+  id: string;
+  name: string;
+  category: 'asset' | 'liability' | 'equity';
+  is_system?: boolean;
+}
 const Accounts: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { accounts, defaultAccount } = useMoneyFlow();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newAccount, setNewAccount] = useState<NewAccountData>({
-    name: '',
-    type: 'checking',
-    initial_balance: 0,
-    currency: 'INR',
-    description: '',
-    color: '#2196f3',
-  });
+const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+const [newAccount, setNewAccount] = useState<NewAccountData>({
+  name: '',
+  type: 'checking',
+  initial_balance: 0,
+  currency: 'INR',
+  description: '',
+  color: '#2196f3',
+});
+const [accountTypes, setAccountTypes] = useState<DBAccountType[]>([]);
+
+React.useEffect(() => {
+  const loadTypes = async () => {
+    if (!user) { setAccountTypes([]); return; }
+    const { data, error } = await supabase
+      .from('account_types')
+      .select('id,name,category,is_system')
+      .or(`is_system.eq.true,user_id.eq.${user.id}`)
+      .order('is_system', { ascending: false })
+      .order('name');
+    if (!error && data) setAccountTypes(data as DBAccountType[]);
+  };
+  loadTypes();
+}, [user]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -62,26 +84,63 @@ const Accounts: React.FC = () => {
     }).format(amount);
   };
 
+  const typesMap = React.useMemo(() => new Map(accountTypes.map(t => [t.id, t])), [accountTypes]);
+
   const totalAssets = accounts
-    .filter(account => ['checking', 'savings', 'investment', 'cash', 'wallet'].includes(account.account_type_id))
+    .filter((account) => typesMap.get(account.account_type_id)?.category === 'asset')
     .reduce((sum, account) => sum + account.balance, 0);
 
   const totalLiabilities = accounts
-    .filter(account => ['credit', 'loan'].includes(account.account_type_id))
+    .filter((account) => typesMap.get(account.account_type_id)?.category === 'liability')
     .reduce((sum, account) => sum + account.balance, 0);
 
   const netWorth = totalAssets - totalLiabilities;
+
+  const resolveTypeMeta = (type: AccountType): { name: string; category: 'asset' | 'liability' | 'equity' } => {
+    switch (type) {
+      case 'checking': return { name: 'Checking', category: 'asset' };
+      case 'savings': return { name: 'Savings', category: 'asset' };
+      case 'investment': return { name: 'Investment', category: 'asset' };
+      case 'credit': return { name: 'Credit Card', category: 'liability' };
+      case 'loan': return { name: 'Loan', category: 'liability' };
+      case 'cash': return { name: 'Cash', category: 'asset' };
+      case 'wallet': return { name: 'Wallet', category: 'asset' };
+      default: return { name: 'Account', category: 'asset' };
+    }
+  };
+
+  const getOrCreateAccountType = async (type: AccountType): Promise<string> => {
+    if (!user) throw new Error('Not authenticated');
+    const meta = resolveTypeMeta(type);
+    const { data: existing } = await supabase
+      .from('account_types')
+      .select('id')
+      .eq('name', meta.name)
+      .or(`is_system.eq.true,user_id.eq.${user.id}`)
+      .maybeSingle();
+
+    if (existing?.id) return existing.id;
+
+    const { data, error } = await supabase
+      .from('account_types')
+      .insert([{ name: meta.name, category: meta.category, user_id: user.id, is_system: false }])
+      .select('id')
+      .single();
+    if (error) throw error;
+    return data.id as string;
+  };
 
   const handleAddAccount = async () => {
     if (!user) return;
 
     try {
+      const accountTypeId = await getOrCreateAccountType(newAccount.type);
       const { data, error } = await supabase
         .from('accounts')
         .insert([{
           user_id: user.id,
           name: newAccount.name,
-          account_type_id: newAccount.type,
+          account_type_id: accountTypeId,
           balance: newAccount.initial_balance,
           initial_balance: newAccount.initial_balance,
           currency: newAccount.currency,
@@ -339,19 +398,22 @@ const Accounts: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {accounts.map((account) => (
-              <Card key={account.id} className="relative overflow-hidden">
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${getAccountColor(account.account_type_id)}`}>
-                        {getAccountIcon(account.account_type_id)}
-                      </div>
-                      <div>
-                        <h3 className="font-medium">{account.name}</h3>
-                        <p className="text-sm text-gray-500">
-                          {account.account_type_id.charAt(0).toUpperCase() + account.account_type_id.slice(1)}
-                        </p>
+            {accounts.map((account) => {
+              const typeObj = accountTypes.find(t => t.id === account.account_type_id);
+              const typeName = typeObj?.name || 'Account';
+              const normalizedType = typeName.toLowerCase();
+              return (
+                <Card key={account.id} className="relative overflow-hidden">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${getAccountColor(normalizedType)}`}>
+                          {getAccountIcon(normalizedType)}
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{account.name}</h3>
+                          <p className="text-sm text-gray-500">{typeName}</p>
+                        </div>
                       </div>
                     </div>
                     {account.is_default && (
