@@ -39,20 +39,10 @@ export interface Account {
   account_type?: AccountType; // Joined data
 }
 
-// Define the transaction tag interface
-export interface TransactionTag {
-  id: string;
-  user_id: string;
-  name: string;
-  color?: string;
-  created_at: string;
-}
-
 // Define the context interface
 interface AccountsContextType {
   accounts: Account[];
   accountTypes: AccountType[];
-  transactionTags: TransactionTag[];
   isLoading: boolean;
   
   // Account operations
@@ -66,11 +56,6 @@ interface AccountsContextType {
   addAccountType: (accountType: Omit<AccountType, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'is_system'>) => Promise<void>;
   updateAccountType: (id: string, updates: Partial<AccountType>) => Promise<void>;
   deleteAccountType: (id: string) => Promise<void>;
-  
-  // Tag operations
-  addTransactionTag: (tag: Omit<TransactionTag, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
-  updateTransactionTag: (id: string, updates: Partial<TransactionTag>) => Promise<void>;
-  deleteTransactionTag: (id: string) => Promise<void>;
   
   // Utility functions
   calculateNetWorth: () => number;
@@ -100,7 +85,6 @@ interface AccountsProviderProps {
 export const AccountsProvider: React.FC<AccountsProviderProps> = ({ children }) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountTypes, setAccountTypes] = useState<AccountType[]>([]);
-  const [transactionTags, setTransactionTags] = useState<TransactionTag[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
@@ -174,35 +158,6 @@ export const AccountsProvider: React.FC<AccountsProviderProps> = ({ children }) 
     }
   };
 
-  // Load transaction tags from Supabase
-  const loadTransactionTags = async () => {
-    if (!isAuthenticated || !user) {
-      setTransactionTags([]);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('transaction_tags')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name');
-      
-      if (error) throw error;
-      
-      if (data) {
-        setTransactionTags(data as TransactionTag[]);
-      }
-    } catch (error: any) {
-      console.error('Error loading transaction tags:', error.message);
-      toast({
-        title: 'Error loading transaction tags',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    }
-  };
-
   // Initialize data
   useEffect(() => {
     const initializeData = async () => {
@@ -210,8 +165,7 @@ export const AccountsProvider: React.FC<AccountsProviderProps> = ({ children }) 
       if (isAuthenticated && user) {
         await Promise.all([
           loadAccountTypes(),
-          loadAccounts(),
-          loadTransactionTags()
+          loadAccounts()
         ]);
       }
       setIsLoading(false);
@@ -222,7 +176,7 @@ export const AccountsProvider: React.FC<AccountsProviderProps> = ({ children }) 
 
   // Refresh all accounts data
   const refreshAccounts = async () => {
-    await Promise.all([loadAccounts(), loadAccountTypes(), loadTransactionTags()]);
+    await Promise.all([loadAccounts(), loadAccountTypes()]);
   };
 
   // Add a new account
@@ -432,100 +386,6 @@ export const AccountsProvider: React.FC<AccountsProviderProps> = ({ children }) 
     }
   };
 
-  // Add a new transaction tag
-  const addTransactionTag = async (tag: Omit<TransactionTag, 'id' | 'user_id' | 'created_at'>) => {
-    if (!isAuthenticated || !user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('transaction_tags')
-        .insert({
-          ...tag,
-          user_id: user.id,
-        })
-        .select()
-        .single();
-        
-      if (error) throw error;
-      
-      setTransactionTags(prev => [...prev, data as TransactionTag]);
-      
-      toast({
-        title: 'Tag created',
-        description: `${tag.name} tag has been created`,
-      });
-    } catch (error: any) {
-      console.error('Error adding transaction tag:', error.message);
-      toast({
-        title: 'Error creating tag',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Update a transaction tag
-  const updateTransactionTag = async (id: string, updates: Partial<TransactionTag>) => {
-    if (!isAuthenticated || !user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('transaction_tags')
-        .update(updates)
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-        
-      if (error) throw error;
-      
-      setTransactionTags(prev => prev.map(tag => 
-        tag.id === id ? data as TransactionTag : tag
-      ));
-      
-      toast({
-        title: 'Tag updated',
-        description: 'Tag has been updated successfully',
-      });
-    } catch (error: any) {
-      console.error('Error updating transaction tag:', error.message);
-      toast({
-        title: 'Error updating tag',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Delete a transaction tag
-  const deleteTransactionTag = async (id: string) => {
-    if (!isAuthenticated || !user) return;
-
-    try {
-      const { error } = await supabase
-        .from('transaction_tags')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-        
-      if (error) throw error;
-      
-      setTransactionTags(prev => prev.filter(tag => tag.id !== id));
-      
-      toast({
-        title: 'Tag deleted',
-        description: 'Tag has been deleted successfully',
-      });
-    } catch (error: any) {
-      console.error('Error deleting transaction tag:', error.message);
-      toast({
-        title: 'Error deleting tag',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    }
-  };
-
   // Utility functions
   const getAccountById = (id: string) => {
     return accounts.find(account => account.id === id);
@@ -537,7 +397,10 @@ export const AccountsProvider: React.FC<AccountsProviderProps> = ({ children }) 
 
   const calculateNetWorth = () => {
     return accounts.reduce((total, account) => {
-      if (!account.account_type?.affects_net_worth) return total;
+      if (!account.account_type) return total;
+      
+      // Only include accounts that affect net worth
+      if (!account.account_type.affects_net_worth) return total;
       
       if (account.account_type.category === 'asset') {
         return total + account.balance;
@@ -562,7 +425,6 @@ export const AccountsProvider: React.FC<AccountsProviderProps> = ({ children }) 
       value={{
         accounts,
         accountTypes,
-        transactionTags,
         isLoading,
         addAccount,
         updateAccount,
@@ -572,9 +434,6 @@ export const AccountsProvider: React.FC<AccountsProviderProps> = ({ children }) 
         addAccountType,
         updateAccountType,
         deleteAccountType,
-        addTransactionTag,
-        updateTransactionTag,
-        deleteTransactionTag,
         calculateNetWorth,
         getAssetAccounts,
         getLiabilityAccounts,

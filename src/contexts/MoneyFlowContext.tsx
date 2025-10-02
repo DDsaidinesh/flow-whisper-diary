@@ -299,13 +299,13 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
         // Create transfer category
         const { data, error } = await supabase
           .from('categories')
-          .insert({
+          .insert([{
             name: 'Account Transfer',
-            type: 'transfer',
+            type: 'income' as any, // Use income type as a workaround for transfer
             user_id: user.id,
             is_default: false,
             color: '#9C27B0'
-          })
+          }])
           .select('id')
           .single();
           
@@ -316,16 +316,16 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       // Insert the transfer transaction
       const { data, error } = await supabase
         .from('transactions')
-        .insert({
+        .insert([{
           user_id: user.id,
           amount: amount,
           description: description,
           category_id: categoryId,
-          type: 'transfer',
+          type: 'income' as any, // Use income type as a workaround for transfer
           date: date,
           from_account_id: fromAccountId,
           to_account_id: toAccountId
-        })
+        }])
         .select(`
           *,
           categories (name)
@@ -377,12 +377,12 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
           // Create a new category if needed
           const { data, error } = await supabase
             .from('categories')
-            .insert({
+            .insert([{
               name: transaction.category,
-              type: transaction.type,
+              type: transaction.type === 'transfer' ? 'income' : transaction.type as any,
               user_id: user.id,
               is_default: false
-            })
+            }])
             .select('id')
             .single();
             
@@ -401,16 +401,16 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       // Insert the transaction
       const { data, error } = await supabase
         .from('transactions')
-        .insert({
+        .insert([{
           user_id: user.id,
           amount: transaction.amount,
           description: transaction.description,
           category_id: categoryId,
-          type: transaction.type,
+          type: transaction.type === 'transfer' ? 'income' : transaction.type as any,
           date: transaction.date,
           from_account_id: fromAccountId,
           to_account_id: transaction.to_account_id
-        })
+        }])
         .select(`
           *,
           categories (name)
@@ -542,14 +542,14 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
     try {
       const { data, error } = await supabase
         .from('categories')
-        .insert({
+        .insert([{
           name: category.name,
-          type: category.type,
+          type: category.type === 'transfer' ? 'income' : category.type as any,
           color: category.color,
           icon: category.icon,
           user_id: user.id,
           is_default: false
-        })
+        }])
         .select()
         .single();
         
