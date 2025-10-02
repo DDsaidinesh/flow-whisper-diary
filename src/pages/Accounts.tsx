@@ -460,48 +460,7 @@ React.useEffect(() => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {accounts.map((account) => {
-              const typeObj = accountTypes.find(t => t.id === account.account_type_id);
-              const typeName = typeObj?.name || 'Account';
-              const normalizedType = typeName.toLowerCase();
-              return (
-                <Card key={account.id} className="relative overflow-hidden">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full ${getAccountColor(normalizedType)}`}>
-                          {getAccountIcon(normalizedType)}
-                        </div>
-                        <div>
-                          <h3 className="font-medium">{account.name}</h3>
-                          <p className="text-sm text-gray-500">{typeName}</p>
-                        </div>
-                      </div>
-                    </div>
-                    {account.is_default && (
-                      <Badge variant="outline" className="ml-2">Default</Badge>
-                    )}
-                    <div className="mt-4">
-                      <p className="text-2xl font-bold">
-                      {formatCurrency(account.balance)}
-                    </p>
-                    {account.description && (
-                      <p className="text-sm text-gray-500 mt-2">{account.description}</p>
-                    )}
-                  </div>
-                  <div className="absolute top-2 right-2 flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    {!account.is_default && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {accounts.map((account) => renderAccountCard(account))}
           </div>
         </CardContent>
       </Card>
