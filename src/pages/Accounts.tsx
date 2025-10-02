@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { z } from 'zod';
 import { Plus, Edit2, Trash2, TrendingUp, TrendingDown, Wallet, CreditCard, Building, Landmark, PiggyBank } from 'lucide-react';
 import { useMoneyFlow } from '@/contexts/MoneyFlowContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,6 +47,18 @@ interface DBAccountType {
   category: 'asset' | 'liability' | 'equity';
   is_system?: boolean;
 }
+
+// Validation schema for new account input
+const newAccountSchema = z.object({
+  name: z.string().trim().min(1, { message: 'Account name is required' }).max(100),
+  type: z.enum(['checking','savings','investment','credit','loan','cash','wallet']),
+  initial_balance: z.number().min(-1000000000).max(1000000000),
+  currency: z.string().trim().min(1).max(10),
+  description: z.string().trim().max(200).optional().or(z.literal('')),
+  color: z.string().trim().max(20).optional(),
+  account_number: z.string().trim().max(20).optional(),
+});
+
 const Accounts: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -133,6 +146,13 @@ React.useEffect(() => {
   const handleAddAccount = async () => {
     if (!user) return;
 
+    const parsed = newAccountSchema.safeParse(newAccount);
+    if (!parsed.success) {
+      const msg = parsed.error.errors[0]?.message || 'Please check your input';
+      toast({ title: 'Invalid input', description: msg, variant: 'destructive' });
+      return;
+    }
+
     try {
       const accountTypeId = await getOrCreateAccountType(newAccount.type);
       const { data, error } = await supabase
@@ -217,6 +237,48 @@ React.useEffect(() => {
       default:
         return 'bg-gray-100 text-gray-700';
     }
+  };
+
+  const renderAccountCard = (account: any) => {
+    const typeObj = accountTypes.find((t) => t.id === account.account_type_id);
+    const typeName = typeObj?.name || 'Account';
+    const normalizedType = typeName.toLowerCase();
+    return (
+      <Card key={account.id} className="relative overflow-hidden">
+        <CardContent className="pt-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-full ${getAccountColor(normalizedType)}`}>
+                {getAccountIcon(normalizedType)}
+              </div>
+              <div>
+                <h3 className="font-medium">{account.name}</h3>
+                <p className="text-sm text-gray-500">{typeName}</p>
+              </div>
+            </div>
+          </div>
+          {account.is_default && (
+            <Badge variant="outline" className="ml-2">Default</Badge>
+          )}
+          <div className="mt-4">
+            <p className="text-2xl font-bold">{formatCurrency(account.balance)}</p>
+            {account.description && (
+              <p className="text-sm text-gray-500 mt-2">{account.description}</p>
+            )}
+          </div>
+          <div className="absolute top-2 right-2 flex gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            {!account.is_default && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -419,9 +481,8 @@ React.useEffect(() => {
                     {account.is_default && (
                       <Badge variant="outline" className="ml-2">Default</Badge>
                     )}
-                  </div>
-                  <div className="mt-4">
-                    <p className="text-2xl font-bold">
+                    <div className="mt-4">
+                      <p className="text-2xl font-bold">
                       {formatCurrency(account.balance)}
                     </p>
                     {account.description && (
