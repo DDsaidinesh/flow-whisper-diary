@@ -242,9 +242,13 @@ export type Database = {
         Args: { p_transactions: Json; p_user_id: string }
         Returns: Json
       }
+      recalculate_account_balances: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
-      transaction_type: "income" | "expense"
+      transaction_type: "income" | "expense" | "transfer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -372,7 +376,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      transaction_type: ["income", "expense"],
+      transaction_type: ["income", "expense", "transfer"],
     },
   },
 } as const

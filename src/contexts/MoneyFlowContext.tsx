@@ -301,7 +301,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
           .from('categories')
           .insert([{
             name: 'Account Transfer',
-            type: 'income' as any, // Use income type as a workaround for transfer
+            type: 'transfer' as any,
             user_id: user.id,
             is_default: false,
             color: '#9C27B0'
@@ -321,7 +321,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
           amount: amount,
           description: description,
           category_id: categoryId,
-          type: 'income' as any, // Use income type as a workaround for transfer
+          type: 'transfer' as any,
           date: date,
           from_account_id: fromAccountId,
           to_account_id: toAccountId
@@ -379,7 +379,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
             .from('categories')
             .insert([{
               name: transaction.category,
-              type: transaction.type === 'transfer' ? 'income' : transaction.type as any,
+              type: transaction.type as any,
               user_id: user.id,
               is_default: false
             }])
@@ -406,7 +406,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
           amount: transaction.amount,
           description: transaction.description,
           category_id: categoryId,
-          type: transaction.type === 'transfer' ? 'income' : transaction.type as any,
+          type: transaction.type as any,
           date: transaction.date,
           from_account_id: fromAccountId,
           to_account_id: transaction.to_account_id
@@ -544,7 +544,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
         .from('categories')
         .insert([{
           name: category.name,
-          type: category.type === 'transfer' ? 'income' : category.type as any,
+          type: category.type as any,
           color: category.color,
           icon: category.icon,
           user_id: user.id,
@@ -579,7 +579,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
     return defaultAccount.balance || 0;
   };
 
-  // Get total income - filtered by current user
+  // Get total income - filtered by current user (excludes transfers)
   const getIncome = () => {
     if (!isAuthenticated || !user) return 0;
     
@@ -588,7 +588,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
-  // Get total expenses - filtered by current user
+  // Get total expenses - filtered by current user (excludes transfers)
   const getExpenses = () => {
     if (!isAuthenticated || !user) return 0;
     
