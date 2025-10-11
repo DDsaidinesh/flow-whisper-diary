@@ -147,6 +147,11 @@ export const AccountsProvider: React.FC<AccountsProviderProps> = ({ children }) 
         })) as Account[];
         
         setAccounts(processedAccounts);
+        
+        // If user has no accounts, create a default Cash account
+        if (processedAccounts.length === 0) {
+          await createDefaultCashAccount();
+        }
       }
     } catch (error: any) {
       console.error('Error loading accounts:', error.message);
@@ -155,6 +160,60 @@ export const AccountsProvider: React.FC<AccountsProviderProps> = ({ children }) 
         description: error.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
+    }
+  };
+
+  // Create default Cash account for users who don't have any accounts
+  const createDefaultCashAccount = async () => {
+    if (!isAuthenticated || !user) return;
+
+    try {
+      // Get the Cash account type
+      const { data: cashAccountType, error: typeError } = await supabase
+        .from('account_types')
+        .select('id')
+        .eq('name', 'Cash')
+        .eq('is_system', true)
+        .single();
+      
+      if (typeError) throw typeError;
+      
+      // Create the default Cash account
+      const { data, error } = await supabase
+        .from('accounts')
+        .insert({
+          user_id: user.id,
+          name: 'Cash',
+          account_type_id: cashAccountType.id,
+          balance: 0,
+          initial_balance: 0,
+          currency: 'INR',
+          description: 'Default cash account',
+          is_active: true,
+          is_default: true,
+        })
+        .select(`
+          *,
+          account_types (*)
+        `)
+        .single();
+        
+      if (error) throw error;
+      
+      const newAccount = {
+        ...data,
+        account_type: data.account_types,
+      } as Account;
+      
+      setAccounts(prev => [newAccount, ...prev]);
+      
+      toast({
+        title: 'Default account created',
+        description: 'A default Cash account has been created for you',
+      });
+    } catch (error: any) {
+      console.error('Error creating default Cash account:', error.message);
+      // Don't show error toast for this as it's not critical
     }
   };
 
@@ -189,7 +248,7 @@ export const AccountsProvider: React.FC<AccountsProviderProps> = ({ children }) 
         .insert({
           ...account,
           user_id: user.id,
-          balance: account.initial_balance,
+          balance: account.initial_balance, // Initial balance, will be updated by triggers
         })
         .select(`
           *,

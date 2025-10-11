@@ -60,20 +60,20 @@ const TransactionList: React.FC = () => {
 
   return (
     <Card className="w-full border-primary/20">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-lg font-semibold mb-4">Recent Transactions</CardTitle>
-        <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2 sm:gap-4">
+      <CardHeader className="pb-4 space-y-4">
+        <CardTitle className="text-lg font-semibold">Recent Transactions</CardTitle>
+        <div className="flex flex-col gap-3">
           <Input
             placeholder="Search transactions..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-auto"
+            className="w-full"
           />
           <Select
             value={filterType}
             onValueChange={setFilterType}
           >
-            <SelectTrigger className="w-full sm:w-[140px]">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
             <SelectContent>
@@ -85,8 +85,8 @@ const TransactionList: React.FC = () => {
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="px-2 sm:px-6">
-        <div className="space-y-4">
+      <CardContent className="px-4 sm:px-6 pb-4">
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
           {filteredTransactions.length === 0 ? (
             <p className="text-center py-4 text-muted-foreground">No transactions found</p>
           ) : (
@@ -147,74 +147,75 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   };
   
   return (
-    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-      <div className="flex items-center gap-4 flex-grow min-w-0">
-        <div
-          className={cn(
-            "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
-            type === 'income' ? 'bg-flow-income-light text-flow-income' : 
-            type === 'transfer' ? 'bg-flow-transfer-light text-flow-transfer' : 
-            'bg-flow-expense-light text-flow-expense'
-          )}
-        >
-          {getTransactionIcon()}
-        </div>
-        
-        <div className="flex-grow min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
-            <div className="min-w-0 flex-grow">
-              <h4 className="font-medium text-gray-900 truncate">{description}</h4>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
-                <span className="text-sm text-gray-500">
-                  {format(new Date(date), 'MMM dd, yyyy')}
-                </span>
-                {getAccountInfo() && (
-                  <>
-                    <span className="hidden sm:inline text-gray-300">•</span>
-                    <span className="text-xs text-gray-400">{getAccountInfo()}</span>
-                  </>
-                )}
-              </div>
+    <div className="flex items-start gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+      {/* Transaction Icon */}
+      <div
+        className={cn(
+          "w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+          type === 'income' ? 'bg-green-100 text-green-600' : 
+          type === 'transfer' ? 'bg-blue-100 text-blue-600' : 
+          'bg-red-100 text-red-600'
+        )}
+      >
+        {getTransactionIcon()}
+      </div>
+      
+      {/* Transaction Details */}
+      <div className="flex-grow min-w-0">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-grow">
+            <h4 className="font-medium text-gray-900 truncate">{description}</h4>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm text-gray-500">
+                {format(new Date(date), 'MMM dd, yyyy')}
+              </span>
+              {getAccountInfo() && (
+                <>
+                  <span className="text-gray-300">•</span>
+                  <span className="text-xs text-gray-400">{getAccountInfo()}</span>
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="mt-2 flex items-center">
               <Badge 
                 className={cn(
-                  "text-xs",
-                  type === 'income' ? 'bg-flow-income-light text-flow-income border-flow-income/20' : 
-                  type === 'transfer' ? 'bg-flow-transfer-light text-flow-transfer border-flow-transfer/20' :
-                  'bg-flow-expense-light text-flow-expense border-flow-expense/20'
+                  "text-xs inline-block max-w-fit",
+                  type === 'income' ? 'bg-green-100 text-green-700 border-green-200' : 
+                  type === 'transfer' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                  'bg-red-100 text-red-700 border-red-200'
                 )}
               >
                 {category}
               </Badge>
             </div>
           </div>
+          
+          {/* Amount and Delete Button */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="text-right min-w-[100px]">
+              <span
+                className={cn(
+                  "text-lg font-semibold block",
+                  type === 'income' ? 'text-green-600' : 
+                  type === 'transfer' ? 'text-blue-600' :
+                  'text-red-600'
+                )}
+              >
+                {type === 'income' ? '+' : type === 'transfer' ? '' : '-'}₹{formatAmount(amount)}
+              </span>
+            </div>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete(id)}
+              className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 shrink-0"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Delete</span>
+            </Button>
+          </div>
         </div>
-      </div>
-      
-      <div className="flex items-center gap-4 shrink-0 ml-4">
-        <div className="text-right">
-          <span
-            className={cn(
-              "text-lg font-semibold block",
-              type === 'income' ? 'text-flow-income' : 
-              type === 'transfer' ? 'text-flow-transfer' :
-              'text-flow-expense'
-            )}
-          >
-            {type === 'income' ? '+' : type === 'transfer' ? '' : '-'}₹{formatAmount(amount)}
-          </span>
-        </div>
-        
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDelete(id)}
-          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
-        >
-          <Trash2 className="h-4 w-4" />
-          <span className="sr-only">Delete</span>
-        </Button>
       </div>
     </div>
   );

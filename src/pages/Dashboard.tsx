@@ -61,7 +61,7 @@ const Dashboard: React.FC = () => {
         
         {/* Right Column - Transaction List */}
         <div className="lg:col-span-1">
-          <section className="lg:sticky lg:top-24">
+          <section className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-hidden">
             <TransactionList />
           </section>
         </div>

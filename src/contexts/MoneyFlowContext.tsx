@@ -342,7 +342,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       
       setTransactions(prev => [newTransaction, ...prev]);
 
-      // Reload accounts to get updated balances (triggers will handle the balance update)
+      // Reload accounts to get updated balances after transfer
       await reloadAccounts();
       
       toast({
@@ -427,7 +427,7 @@ export const MoneyFlowProvider: React.FC<MoneyFlowProviderProps> = ({ children }
       
       setTransactions(prev => [newTransaction, ...prev]);
 
-      // Reload accounts to get updated balances (triggers will handle the balance update)
+      // Reload accounts to get updated balances after transaction
       await reloadAccounts();
       
       toast({
