@@ -65,9 +65,10 @@ const Analytics: React.FC = () => {
       if (data) {
         if (transaction.type === 'income') {
           data.income += transaction.amount;
-        } else {
+        } else if (transaction.type === 'expense') {
           data.expense += transaction.amount;
         }
+        // Transfers are ignored - they don't affect income or expense totals
         data.net = data.income - data.expense;
       }
     });

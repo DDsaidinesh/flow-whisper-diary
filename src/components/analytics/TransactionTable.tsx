@@ -24,7 +24,7 @@ import { DateRange } from "react-day-picker";
 const TransactionTable = () => {
   const { transactions } = useMoneyFlow();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
+  const [filterType, setFilterType] = useState<"all" | "income" | "expense" | "transfer">("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: undefined,
     to: undefined,
@@ -119,7 +119,7 @@ const TransactionTable = () => {
           
           <Select
             value={filterType}
-            onValueChange={(value: "all" | "income" | "expense") => setFilterType(value)}
+            onValueChange={(value: "all" | "income" | "expense" | "transfer") => setFilterType(value)}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="All Transactions" />
@@ -128,6 +128,7 @@ const TransactionTable = () => {
               <SelectItem value="all">All Transactions</SelectItem>
               <SelectItem value="income">Income Only</SelectItem>
               <SelectItem value="expense">Expenses Only</SelectItem>
+              <SelectItem value="transfer">Transfers Only</SelectItem>
             </SelectContent>
           </Select>
 
